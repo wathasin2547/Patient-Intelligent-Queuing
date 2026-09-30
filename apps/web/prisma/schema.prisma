@@ -1,0 +1,164 @@
+// Collection and field names must match SPEC.md §2 and the ER diagram in the thesis.
+// Changing a name here means updating the report too.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  lineUserId     String   @unique
+  fullName       String?
+  ageGroup       String? // "0-5" | "6-17" | "18-59" | "60+"
+  gender         String?
+  healthCoverage String?
+  isChronic      Boolean  @default(false)
+  address        String?
+  createdAt      DateTime @default(now())
+
+  screenings Screening[]
+  refills    RefillSchedule[]
+}
+
+model SymptomCode {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  code              String   @unique // "abdominal_pain_rlq"
+  label             String // "ปวดท้องด้านขวาล่าง"
+  synonyms          String[] // words patients tend to use; helps the LLM
+  departmentWeights Json // { "<departmentId>": number }
+  isRedFlag         Boolean  @default(false)
+  onsiteOnly        Boolean  @default(false)
+  priorityHint      Int? // 1-5, minimum level forced by this code
+  isActive          Boolean  @default(true)
+}
+
+model Question {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  questionText String
+  options      Json // [{ label, symptomCode }]
+  group        String // "basic" | "redflag" | "chief" | "chronic"
+  order        Int
+  dependsOn    Json? // condition for showing this question
+  isActive     Boolean @default(true)
+}
+
+model Screening {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  patientId          String   @db.ObjectId
+  answers            Json // raw closed-ended answers
+  freeTextInput      String?
+  symptomCodes       String[] // merged codes from both sources
+  llmCodes           String[] // codes that came from the LLM only (for auditing)
+  llmStatus          String // "ok" | "skipped" | "failed"
+  departmentScores   Json // { "<departmentId>": number }
+  assignedDepartment String?  @db.ObjectId
+  priorityLevel      Int // 1-5
+  onlineEligible     Boolean  @default(false)
+  isRedFlag          Boolean  @default(false)
+  reason             Json // which codes drove the decision
+  createdAt          DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  queue   Queue?
+}
+
+model Department {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String  @unique
+  scopeOfCare String?
+  isActive    Boolean @default(true)
+
+  doctors Doctor[]
+  queues  Queue[]
+}
+
+model Doctor {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  departmentId String @db.ObjectId
+
+  department Department @relation(fields: [departmentId], references: [id])
+  shifts     Shift[]
+  queues     Queue[]
+}
+
+model Shift {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId  String   @db.ObjectId
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  status    String   @default("ACTIVE") // ACTIVE | CANCELLED
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+}
+
+model Queue {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  screeningId   String    @unique @db.ObjectId
+  departmentId  String    @db.ObjectId
+  doctorId      String?   @db.ObjectId
+  queueNumber   String // "MED-014"
+  visitType     String // "ONSITE" | "ONLINE"
+  priorityLevel Int // copied from screening (staff may edit)
+  status        String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
+  checkInTime   DateTime  @default(now())
+  calledTime    DateTime?
+  finishedTime  DateTime?
+  editedBy      String?   @db.ObjectId
+  editedAt      DateTime?
+
+  screening    Screening     @relation(fields: [screeningId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  doctor       Doctor?       @relation(fields: [doctorId], references: [id])
+  prescription Prescription?
+}
+
+model Prescription {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  queueId    String   @unique @db.ObjectId
+  items      Json // [{ name, dosage, quantity }]
+  daysSupply Int
+  issuedAt   DateTime @default(now())
+
+  queue    Queue            @relation(fields: [queueId], references: [id])
+  delivery Delivery?
+  refills  RefillSchedule[]
+}
+
+model Delivery {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  prescriptionId String   @unique @db.ObjectId
+  method         String // "PICKUP" | "SHIP"
+  address        String?
+  status         String   @default("PENDING") // PENDING | PREPARING | READY | SHIPPED | COMPLETED
+  updatedAt      DateTime @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+}
+
+model RefillSchedule {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  patientId      String    @db.ObjectId
+  prescriptionId String    @db.ObjectId
+  dueDate        DateTime
+  remindedAt     DateTime?
+  status         String    @default("PENDING") // PENDING | SENT | CLOSED
+
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+}
+
+model User {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  username     String  @unique
+  passwordHash String
+  role         String // STAFF | ADMIN
+  departmentId String? @db.ObjectId
+  isActive     Boolean @default(true)
+}
