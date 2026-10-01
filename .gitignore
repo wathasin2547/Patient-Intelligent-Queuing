@@ -18,3 +18,7 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# external datasets (real de-identified records) must never be committed
+*.xlsx
+*.csv

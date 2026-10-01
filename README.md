@@ -29,10 +29,25 @@ cd apps/algorithm
 python -m venv .venv
 .venv\Scripts\activate    # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-uvicorn main:app --reload --port 8000
-pytest
+cp .env.example .env      # ใส่ DATABASE_URL เดียวกับ apps/web
+uvicorn main:app --reload --port 8000   # เอกสาร API: http://localhost:8000/docs
+pytest                    # เทสไม่ต้องต่อ DB (ใช้ data/catalog.json)
+python -m scripts.evaluate_vignettes    # วัดผลชุด vignettes (บทที่ 4)
+python -m scripts.evaluate_ktas <path>.xlsx  # เทียบระดับความเร่งด่วนกับ KTAS (ไฟล์อยู่นอก repo)
 ```
+
+| Endpoint | ใช้ตอนไหน |
+|---|---|
+| `POST /triage` | Next.js ส่งคำตอบซักประวัติมา → ได้แผนก ระดับสี เหตุผล แพทย์ที่อยู่เวร และคะแนนคิว |
+| `POST /queue/next` | แพทย์บันทึกผลตรวจ (DONE/NO_SHOW) → ได้คิวถัดไปตามสูตร aging ให้ Next.js เรียกอัตโนมัติ |
+
+service นี้ **อ่าน DB อย่างเดียว** — การบันทึก screening/queue และแจ้ง LINE เป็นหน้าที่ของ Next.js
+
+## ข้อมูลสมมติ (`data/`)
+
+- `catalog.json` — แผนก รหัสอาการ น้ำหนัก คำถาม แพทย์ ใช้ทั้ง `npm run db:seed` และเทสฝั่ง Python
+- `vignettes.json` — ชุดกรณีศึกษาจำลอง คำตอบที่คาดหวังเขียนจากมุมมองทางคลินิก ไม่ได้คำนวณจากน้ำหนัก
+  **อย่าปรับน้ำหนักให้ตรง vignettes ทีละเคส** ไม่งั้นผลวัดในบทที่ 4 จะไม่มีความหมาย
 
 ## กฎสำคัญ
 
