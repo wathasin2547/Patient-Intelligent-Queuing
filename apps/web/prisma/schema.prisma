@@ -70,6 +70,7 @@ model Screening {
 model Department {
   id          String  @id @default(auto()) @map("_id") @db.ObjectId
   name        String  @unique
+  code        String?  
   scopeOfCare String?
   isActive    Boolean @default(true)
 
