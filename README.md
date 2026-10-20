@@ -34,6 +34,7 @@ uvicorn main:app --reload --port 8000   # เอกสาร API: http://localho
 pytest                    # เทสไม่ต้องต่อ DB (ใช้ data/catalog.json)
 python -m scripts.evaluate_vignettes    # วัดผลชุด vignettes (บทที่ 4)
 python -m scripts.evaluate_ktas <path>.xlsx  # เทียบระดับความเร่งด่วนกับ KTAS (ไฟล์อยู่นอก repo)
+python -m scripts.simulate_queue [--alpha|--load]  # จำลองเวลารอ: แบบเดิม vs PIQ ทีละกลไก
 ```
 
 | Endpoint | ใช้ตอนไหน |
