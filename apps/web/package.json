@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "check:queue": "tsx scripts/check-multi-queue.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

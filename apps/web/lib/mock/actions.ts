@@ -1,7 +1,7 @@
 // State transitions for the mock store. Each function is pure: (state, now, payload) -> state.
 // They mirror what the Next.js API routes will do once the database is wired up.
 
-import { APPOINTMENT_LEVEL, newId, nextQueueNumber, nextShiftStart, pickDoctor, shiftNow } from "./logic";
+import { APPOINTMENT_LEVEL, newId, nextQueueNumber, nextShiftStart, pickDoctor, queueLimitError, shiftNow } from "./logic";
 import { addDays, bkkDate } from "./time";
 import type {
   Appointment, Delivery, DeliveryMethod, DeliveryStatus, Department, Doctor, Level, MockState, Patient,
@@ -59,6 +59,29 @@ export function markNoShow(s: MockState, now: number, queueId: string): MockStat
     queues: s.queues.map((x) => (x.id === queueId ? { ...x, status: "NO_SHOW", finishedTime: iso(now) } : x)),
     callEvents: [...s.callEvents, { id: newId("ev"), queueId, doctorId: q.doctorId ?? "", kind: "NO_SHOW", at: iso(now) }],
   };
+}
+
+// ── UC09 alternate flow: refer to another department on the same day ──
+// The new queue waits from the referral time like any other queue (no head start over people
+// already waiting there), so the patient saves a second hospital day without cutting in.
+
+export function referQueue(s: MockState, now: number, p: { fromQueueId: string; departmentId: string; priorityLevel: Level }): { state: MockState; error?: string; queueNumber?: string } {
+  const from = s.queues.find((x) => x.id === p.fromQueueId);
+  if (!from) return { state: s };
+  const limit = queueLimitError(s, from.patientId, p.departmentId);
+  if (limit) return { state: s, error: limit };
+  const doctorId = pickDoctor(s, p.departmentId, now);
+  if (!doctorId) {
+    const at = nextShiftStart(s, p.departmentId, now);
+    return { state: s, error: `แผนก${deptName(s, p.departmentId)}ไม่มีแพทย์ในเวรขณะนี้${at ? ` (เวรถัดไป ${new Date(at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", weekday: "short", hour: "2-digit", minute: "2-digit" })} น.)` : ""} ให้เจ้าหน้าที่บันทึกเป็นนัดหมายแทน` };
+  }
+  const q: Queue = {
+    id: newId("q"), patientId: from.patientId, screeningId: from.screeningId, appointmentId: null, departmentId: p.departmentId, doctorId,
+    queueNumber: nextQueueNumber(s, p.departmentId, now), visitType: from.visitType, priorityLevel: p.priorityLevel, status: "WAITING",
+    checkInTime: iso(now), calledTime: null, finishedTime: null, editedBy: null, editedAt: null, referredFromQueueId: from.id,
+  };
+  const next = notify({ ...s, queues: [...s.queues, q] }, from.patientId, now, `แพทย์ส่งต่อไปแผนก${deptName(s, p.departmentId)} หมายเลขคิว ${q.queueNumber} ตรวจได้ในวันนี้ ไม่ต้องรับคิวใหม่`);
+  return { state: next, queueNumber: q.queueNumber };
 }
 
 // ── UC09 ── (does not call anyone: the freed doctor triggers UC13 on its own)
@@ -127,7 +150,7 @@ export function issueWalkIn(s: MockState, now: number, screening: Omit<Screening
   const q: Queue = {
     id: newId("q"), patientId, screeningId: scr.id, appointmentId: null, departmentId: dept, doctorId,
     queueNumber: nextQueueNumber(next, dept, now), visitType: "ONSITE", priorityLevel: scr.priorityLevel, status: "WAITING",
-    checkInTime: iso(now), calledTime: null, finishedTime: null, editedBy: null, editedAt: null,
+    checkInTime: iso(now), calledTime: null, finishedTime: null, editedBy: null, editedAt: null, referredFromQueueId: null,
   };
   next = notify({ ...next, queues: [...next.queues, q] }, patientId, now, `ได้รับคิวแล้ว หมายเลข ${q.queueNumber} แผนก${deptName(s, dept)}`);
   const doctor = s.doctors.find((d) => d.id === doctorId)?.name;
@@ -221,10 +244,12 @@ export function checkInAppointment(s: MockState, now: number, appointmentId: str
   const doctor = s.doctors.find((d) => d.id === a.doctorId);
   if (!doctor) return { state: s };
   if (!shiftNow(s, a.doctorId, now)) return { state: s, error: "แพทย์ที่นัดไว้ไม่ได้อยู่ในเวรขณะนี้ กรุณาเลื่อนนัดหรือย้ายไปแพทย์ท่านอื่น" };
+  const limit = queueLimitError(s, a.patientId, doctor.departmentId);
+  if (limit) return { state: s, error: limit };
   const q: Queue = {
     id: newId("q"), patientId: a.patientId, screeningId: null, appointmentId: a.id, departmentId: doctor.departmentId, doctorId: a.doctorId,
     queueNumber: nextQueueNumber(s, doctor.departmentId, now), visitType: "ONSITE", priorityLevel: APPOINTMENT_LEVEL, status: "WAITING",
-    checkInTime: iso(now), calledTime: null, finishedTime: null, editedBy: null, editedAt: null,
+    checkInTime: iso(now), calledTime: null, finishedTime: null, editedBy: null, editedAt: null, referredFromQueueId: null,
   };
   const next = { ...setAppointmentStatus(s, a.id, "ARRIVED"), queues: [...s.queues, q] };
   return { state: notify(next, a.patientId, now, `ยืนยันการมาถึงแล้ว หมายเลขคิว ${q.queueNumber}`) };

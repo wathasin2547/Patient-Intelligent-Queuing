@@ -64,23 +64,25 @@ model Screening {
   createdAt          DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id])
-  queue   Queue?
+  queues  Queue[] // more than one when the patient is referred on the same day
 }
 
 model Department {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  name        String  @unique
-  scopeOfCare String?
-  isActive    Boolean @default(true)
+  id                    String  @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String  @unique
+  scopeOfCare           String?
+  defaultServiceMinutes Int     @default(10) // ETA fallback until the doctor has finished cases today
+  isActive              Boolean @default(true)
 
   doctors Doctor[]
   queues  Queue[]
 }
 
 model Doctor {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
   name         String
-  departmentId String @db.ObjectId
+  departmentId String  @db.ObjectId
+  meetingUrl   String? // fixed room on an external video service for online visits
 
   department Department @relation(fields: [departmentId], references: [id])
   shifts     Shift[]
@@ -99,19 +101,20 @@ model Shift {
 }
 
 model Queue {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  screeningId   String    @unique @db.ObjectId
-  departmentId  String    @db.ObjectId
-  doctorId      String?   @db.ObjectId
-  queueNumber   String // "MED-014"
-  visitType     String // "ONSITE" | "ONLINE"
-  priorityLevel Int // copied from screening (staff may edit)
-  status        String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
-  checkInTime   DateTime  @default(now())
-  calledTime    DateTime?
-  finishedTime  DateTime?
-  editedBy      String?   @db.ObjectId
-  editedAt      DateTime?
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  screeningId         String    @db.ObjectId // not unique: a same-day referral reuses the screening
+  departmentId        String    @db.ObjectId
+  doctorId            String?   @db.ObjectId
+  queueNumber         String // "MED-014"
+  visitType           String // "ONSITE" | "ONLINE"
+  priorityLevel       Int // copied from screening (staff may edit)
+  status              String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
+  checkInTime         DateTime  @default(now())
+  calledTime          DateTime?
+  finishedTime        DateTime?
+  editedBy            String?   @db.ObjectId
+  editedAt            DateTime?
+  referredFromQueueId String?   @db.ObjectId // same-day referral from another department
 
   screening    Screening     @relation(fields: [screeningId], references: [id])
   department   Department    @relation(fields: [departmentId], references: [id])
@@ -162,4 +165,10 @@ model User {
   departmentId String? @db.ObjectId
   doctorId     String? @db.ObjectId // DOCTOR accounts only
   isActive     Boolean @default(true)
+}
+
+// Admin-editable system settings (single document), kept out of code like the screening criteria
+model SystemSetting {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  maxActiveQueues Int    @default(3) // queues one patient may hold at once, one per department
 }

@@ -31,6 +31,17 @@ def test_empty_queue():
     assert pick_next([], MORNING, B, A) is None
 
 
+def test_patient_busy_in_another_queue_is_skipped_but_keeps_the_place():
+    line = [queue("held", 3, 30, patient="pt-1"), queue("next", 4, 5, patient="pt-2")]
+    assert pick_next(line, MORNING, B, A, busy_patients={"pt-1"}).queue.id == "next"
+    # once the other exam is over the held patient is first again (W kept counting)
+    assert pick_next(line, MORNING, B, A).queue.id == "held"
+
+
+def test_everyone_busy_means_nobody_is_called():
+    assert pick_next([queue("a", 4, 10, patient="pt-1")], MORNING, B, A, busy_patients={"pt-1"}) is None
+
+
 def test_red_never_enters_queue():
     with pytest.raises(ValueError):
         priority_score(1, 0, B, A)

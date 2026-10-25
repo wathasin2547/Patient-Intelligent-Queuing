@@ -83,6 +83,7 @@ class RankedOut(BaseModel):
     priorityLevel: int
     waitingMinutes: float
     score: float
+    heldElsewhere: bool = False  # patient is busy in another queue: skipped now, keeps the place
 
 
 class NextQueueResponse(BaseModel):
@@ -144,9 +145,12 @@ def next_queue(
     """UC10 auto-call: Next.js calls this after a doctor marks DONE / NO_SHOW,
     then sets the returned queue to CALLED and pushes the LINE message."""
     mine = [q for q in repo.waiting_queues() if q.doctor_id == body.doctorId]
+    busy = repo.busy_patient_ids()
     ranked = [
         RankedOut(queueId=r.queue.id, priorityLevel=r.queue.priority_level,
-                  waitingMinutes=round(r.waiting_minutes, 1), score=round(r.score, 1))
+                  waitingMinutes=round(r.waiting_minutes, 1), score=round(r.score, 1),
+                  heldElsewhere=r.queue.patient_id in busy)
         for r in rank_queues(mine, now, config.base_scores(), config.alpha())
     ]
-    return NextQueueResponse(next=ranked[0] if ranked else None, ranking=ranked)
+    nxt = next((r for r in ranked if not r.heldElsewhere), None)
+    return NextQueueResponse(next=nxt, ranking=ranked)

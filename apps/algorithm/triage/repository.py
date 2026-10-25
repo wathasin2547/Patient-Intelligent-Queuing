@@ -23,6 +23,7 @@ class Repository(Protocol):
     def questions(self) -> dict[str, Question]: ...
     def shifts(self) -> list[Shift]: ...
     def waiting_queues(self) -> list[WaitingQueue]: ...
+    def busy_patient_ids(self) -> set[str]: ...
 
 
 def _options(raw: list[dict]) -> list[Option]:
@@ -71,9 +72,14 @@ class MongoRepository:
                 doctor_id=str(q["doctorId"]) if q.get("doctorId") else None,
                 priority_level=q["priorityLevel"],
                 check_in_time=q["checkInTime"],
+                patient_id=str(q["patientId"]),
             )
             for q in self.db["Queue"].find({"status": "WAITING"})
         ]
+
+    def busy_patient_ids(self) -> set[str]:
+        """Patients being called or examined right now, in any department."""
+        return {str(q["patientId"]) for q in self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}})}
 
     def ping(self) -> None:
         self.client.admin.command("ping")
@@ -93,10 +99,12 @@ class CatalogRepository:
         day: datetime | None = None,
         waiting: list[WaitingQueue] | None = None,
         path: Path = CATALOG_PATH,
+        busy: set[str] | None = None,
     ):
         self.data = json.loads(path.read_text(encoding="utf-8"))
         self.day = (day or datetime.now(timezone.utc)).astimezone(BANGKOK)
         self._waiting = waiting or []
+        self._busy = busy or set()
 
     def symptom_codes(self) -> dict[str, SymptomCode]:
         return {
@@ -136,3 +144,6 @@ class CatalogRepository:
 
     def waiting_queues(self) -> list[WaitingQueue]:
         return list(self._waiting)
+
+    def busy_patient_ids(self) -> set[str]:
+        return set(self._busy)

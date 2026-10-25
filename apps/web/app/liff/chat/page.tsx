@@ -16,12 +16,14 @@ const STEPS = [
 
 export default function ChatInfoPage() {
   const { state } = useMock();
-  const active = state.queues.find((q) => q.patientId === state.liffPatientId && ACTIVE.includes(q.status));
+  const active = state.queues.filter((q) => q.patientId === state.liffPatientId && ACTIVE.includes(q.status));
+  const max = state.settings.maxActiveQueues;
 
-  if (active) {
+  // a second symptom may need another department, up to the limit (one queue per department)
+  if (active.length >= max) {
     return (
       <div className="flex flex-1 flex-col justify-center gap-4 p-5 text-center">
-        <p className="text-sm text-ink-2">คุณมีคิว <b className="font-mono">{active.queueNumber}</b> อยู่แล้ว รับคิวซ้ำไม่ได้จนกว่าคิวเดิมจะสิ้นสุด</p>
+        <p className="text-sm text-ink-2">คุณมีคิวอยู่ {active.length} คิวแล้ว ซึ่งเป็นจำนวนสูงสุดที่ถือพร้อมกันได้ รับคิวเพิ่มได้เมื่อคิวใดคิวหนึ่งสิ้นสุด</p>
         <Link href="/liff/queue" className="rounded-full bg-ink py-3.5 font-medium text-white">ดูสถานะคิว</Link>
       </div>
     );
@@ -41,6 +43,11 @@ export default function ChatInfoPage() {
           </li>
         ))}
       </ol>
+      {active.length > 0 && (
+        <p className="rounded-card bg-surface p-4 text-sm text-ink-2">
+          คุณมีคิว <b className="font-mono">{active.map((q) => q.queueNumber).join(", ")}</b> อยู่แล้ว ถ้ามีอาการอื่นที่ต้องพบแพทย์ต่างแผนก รับคิวเพิ่มได้อีก {max - active.length} คิว และรอพร้อมกันได้เลย
+        </p>
+      )}
       <p className="px-2 text-xs text-ink-3">ระบบแนะนำแผนกจากอาการที่แจ้ง ไม่ใช่การวินิจฉัยโรค แพทย์จะเป็นผู้ตรวจอีกครั้ง</p>
       <p className="mt-auto pt-4 text-center text-xs text-ink-3">ในระบบจริง ปุ่มนี้ปิดหน้า LIFF แล้วกลับไปที่ห้องแชท</p>
     </div>

@@ -2,6 +2,7 @@
 
 // UC13 step 3 — the department screen in front of the exam rooms.
 // Shows queue numbers only (no names or symptoms) for privacy.
+// Online visits are left out: those patients are at home and get their link on LINE.
 
 import { Activity, Megaphone } from "lucide-react";
 import { useState } from "react";
@@ -14,7 +15,8 @@ export default function DisplayPage() {
   const { dept: deptMap, doctor: doctorMap } = useLookups();
   const [dept, setDept] = useState("ALL");
   const doctors = doctorsOnShift(state, now).filter((d) => dept === "ALL" || d.departmentId === dept);
-  const lastCall = [...state.callEvents].reverse().find((e) => e.kind === "CALL" && (dept === "ALL" || doctorMap.get(e.doctorId)?.departmentId === dept));
+  const onsite = (id: string) => state.queues.find((q) => q.id === id)?.visitType !== "ONLINE";
+  const lastCall = [...state.callEvents].reverse().find((e) => e.kind === "CALL" && onsite(e.queueId) && (dept === "ALL" || doctorMap.get(e.doctorId)?.departmentId === dept));
   const latest = lastCall && state.queues.find((q) => q.id === lastCall.queueId);
 
   return (
@@ -54,13 +56,14 @@ export default function DisplayPage() {
 
       <div className="mt-6 grid flex-1 content-start gap-4 md:grid-cols-2 xl:grid-cols-3">
         {doctors.map((d) => {
-          const current = state.queues.find((q) => q.doctorId === d.id && (q.status === "CALLED" || q.status === "IN_PROGRESS"));
-          const next = rankedWaiting(state, d.id, now).slice(0, 3);
+          const current = state.queues.find((q) => q.doctorId === d.id && q.visitType !== "ONLINE" && (q.status === "CALLED" || q.status === "IN_PROGRESS"));
+          const busyOnline = state.queues.some((q) => q.doctorId === d.id && q.visitType === "ONLINE" && (q.status === "CALLED" || q.status === "IN_PROGRESS"));
+          const next = rankedWaiting(state, d.id, now).filter((q) => q.visitType !== "ONLINE").slice(0, 3);
           return (
             <section key={d.id} className="rounded-[32px] bg-white/[0.06] p-6">
               <div className="text-sm text-white/50">{deptMap.get(d.departmentId)?.name}</div>
               <div className="text-lg font-medium">{d.name}</div>
-              <div className="mt-6 text-xs text-white/50">{current?.status === "IN_PROGRESS" ? "กำลังตรวจ" : current ? "เรียกแล้ว" : "ว่าง"}</div>
+              <div className="mt-6 text-xs text-white/50">{current?.status === "IN_PROGRESS" ? "กำลังตรวจ" : current ? "เรียกแล้ว" : busyOnline ? "กำลังตรวจออนไลน์" : "ว่าง"}</div>
               <div className={`font-mono text-6xl font-semibold tracking-tight ${current?.status === "CALLED" ? "text-lime" : ""}`}>{current?.queueNumber ?? "—"}</div>
               <div className="mt-6 text-xs text-white/50">ลำดับถัดไป</div>
               <div className="mt-2 flex flex-wrap gap-2">

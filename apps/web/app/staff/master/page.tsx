@@ -4,7 +4,7 @@
 // weights, red flags, onsite-only codes and the question set are all editable.
 // Records that may already be referenced are deactivated, not deleted.
 
-import { Building2, KeyRound, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
+import { Building2, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
 import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
@@ -81,7 +81,7 @@ function Departments() {
     const code = form.code.trim().toUpperCase();
     if (!/^[A-Z]{2,5}$/.test(code) || !form.name.trim()) return setErr("รหัสแผนกต้องเป็นตัวอักษรภาษาอังกฤษ 2–5 ตัว และต้องมีชื่อแผนก");
     if (state.departments.some((d) => d.code === code || d.name === form.name.trim())) return setErr("รหัสหรือชื่อแผนกซ้ำกับที่มีอยู่");
-    update((s) => saveDepartment(s, { id: `dept_${code}`, code, name: form.name.trim(), scopeOfCare: form.scopeOfCare.trim(), isActive: true }));
+    update((s) => saveDepartment(s, { id: `dept_${code}`, code, name: form.name.trim(), scopeOfCare: form.scopeOfCare.trim(), defaultServiceMinutes: 10, isActive: true }));
     setForm({ code: "", name: "", scopeOfCare: "" });
     setErr(null);
   }
@@ -91,13 +91,16 @@ function Departments() {
       <Card title="แผนก" icon={Building2} note="แผนกเวชปฏิบัติทั่วไปรับผู้ป่วยที่ไม่มีแผนกใดได้คะแนน ควรเปิดใช้งานไว้เสมอ">
         <div className="-mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
           <table className="w-full min-w-[560px] text-sm">
-            <thead><tr><th className={TH}>รหัส</th><th className={TH}>ชื่อ</th><th className={TH}>ขอบเขตการรักษา</th><th className={`${TH} text-right`}>สถานะ</th></tr></thead>
+            <thead><tr><th className={TH}>รหัส</th><th className={TH}>ชื่อ</th><th className={TH}>ขอบเขตการรักษา</th><th className={TH} title="ใช้ประมาณเวลาที่จะถึงคิวจนกว่าแพทย์จะตรวจเสร็จวันนี้ครบ 3 ราย">นาที/ราย</th><th className={`${TH} text-right`}>สถานะ</th></tr></thead>
             <tbody>
               {state.departments.map((d) => (
                 <tr key={d.id} className={TR}>
                   <td className="py-3"><span className="rounded-full bg-subtle px-2.5 py-1 font-mono text-xs">{d.code}</span></td>
                   <td className="py-3 font-medium">{d.name}</td>
                   <td className="py-3 pr-4 text-ink-2">{d.scopeOfCare}</td>
+                  <td className="py-3 pr-4">
+                    <input inputMode="numeric" value={d.defaultServiceMinutes} onChange={(e) => update((s) => saveDepartment(s, { ...d, defaultServiceMinutes: Number(e.target.value.replace(/\D/g, "")) || 1 }))} className="input w-16 py-1.5 text-center text-sm" />
+                  </td>
                   <td className="py-3 text-right"><ActiveToggle active={d.isActive} onChange={(v) => update((s) => saveDepartment(s, { ...d, isActive: v }))} /></td>
                 </tr>
               ))}
@@ -114,6 +117,14 @@ function Departments() {
           {err && <Notice tone="rose">{err}</Notice>}
         </div>
       </Card>
+      <Card title="คิวหลายแผนก" icon={Layers} className="xl:col-start-2">
+        <Field label="ผู้ป่วย 1 คนถือคิวพร้อมกันได้สูงสุด (แผนกละ 1 คิว)">
+          <select value={state.settings.maxActiveQueues} onChange={(e) => update((s) => ({ ...s, settings: { ...s.settings, maxActiveQueues: Number(e.target.value) } }))} className="input">
+            {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} คิว</option>)}
+          </select>
+        </Field>
+        <p className="mt-3 text-xs text-ink-3">ระบบเรียกผู้ป่วยได้ทีละคิว ถ้ากำลังตรวจอยู่อีกแผนก ระบบเก็บลำดับไว้และเรียกคนถัดไปแทน</p>
+      </Card>
     </div>
   );
 }
@@ -123,15 +134,18 @@ function Departments() {
 function Doctors() {
   const { state, update } = useMock();
   const { dept } = useLookups();
-  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "" });
+  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "", meetingUrl: "" });
   return (
     <div className={LAYOUT}>
-      <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย">
+      <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย · ลิงก์ห้องตรวจออนไลน์ส่งให้ผู้ป่วยตรวจออนไลน์เมื่อถึงคิว">
         <ul className="flex flex-col gap-2">
           {state.doctors.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5">
               <Avatar text={doctorInitials(d.name, dept.get(d.departmentId)?.code)} dark />
-              <span className="min-w-0 flex-1 truncate font-medium">{d.name}</span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{d.name}</div>
+                <MeetingUrlInput key={d.meetingUrl ?? ""} value={d.meetingUrl} onSave={(v) => update((s) => saveDoctor(s, { ...d, meetingUrl: v }))} />
+              </div>
               <PillSelect value={d.departmentId} onChange={(v) => update((s) => saveDoctor(s, { ...d, departmentId: v }))} className="w-48">
                 {state.departments.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </PillSelect>
@@ -147,11 +161,14 @@ function Doctors() {
               {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
+          <Field label="ลิงก์ห้องตรวจออนไลน์" hint="ห้องประจำของแพทย์บนบริการวิดีโอคอลภายนอก เว้นว่างได้">
+            <input value={form.meetingUrl} onChange={(e) => setForm((f) => ({ ...f, meetingUrl: e.target.value }))} className="input" placeholder="https://" />
+          </Field>
           <button
             disabled={!form.name.trim()}
             onClick={() => {
-              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId }));
-              setForm((f) => ({ ...f, name: "" }));
+              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId, meetingUrl: form.meetingUrl.trim() || null }));
+              setForm((f) => ({ ...f, name: "", meetingUrl: "" }));
             }}
             className={`${btn.primary} mt-1`}
           >
@@ -160,6 +177,20 @@ function Doctors() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** Saved on blur so typing a link does not rewrite the store on every key. */
+function MeetingUrlInput({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
+  const [text, setText] = useState(value ?? "");
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => text.trim() !== (value ?? "") && onSave(text.trim() || null)}
+      placeholder="ลิงก์ห้องตรวจออนไลน์ (ยังไม่ได้ตั้ง)"
+      className="mt-0.5 w-full truncate bg-transparent text-xs text-ink-3 outline-none placeholder:text-ink-3/60 focus:text-ink"
+    />
   );
 }
 

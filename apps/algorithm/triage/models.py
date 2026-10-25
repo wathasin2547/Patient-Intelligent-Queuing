@@ -45,6 +45,7 @@ class WaitingQueue:
     doctor_id: str | None
     priority_level: int
     check_in_time: datetime
+    patient_id: str = ""  # one patient may wait in several departments at once
 
 
 @dataclass(frozen=True)

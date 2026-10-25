@@ -3,18 +3,24 @@
 // UC10 Queue Management + UC13 calling patients — what staff see of the system-run queue.
 // Staff do not pick who goes next: the system calls the highest-P patient when a doctor is free.
 
-import { MessageCircle, Megaphone, Search, UserX, Zap } from "lucide-react";
+import { Hourglass, MessageCircle, Megaphone, Search, UserX, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { CurrentPatient, PFormula, QueueRow } from "@/components/queue";
+import { CalledActions, CurrentPatient, PFormula, QueueRow } from "@/components/queue";
 import { Avatar, btn, Card, doctorInitials, Empty, LevelChip, Notice, PageHeader, PillSelect, QUEUE_STATUS, Segmented, StatusChip, Tag } from "@/components/ui";
-import { issueWalkIn, markNoShow, startExam } from "@/lib/mock/actions";
-import { doctorLoad, doctorsOnShift, NO_SHOW_MINUTES, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
+import { issueWalkIn } from "@/lib/mock/actions";
+import { doctorLoad, doctorsOnShift, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
 import { PRESETS, simulateScreening } from "@/lib/mock/simulate";
 import { useLookups, useMock } from "@/lib/mock/store";
-import { bkkDate, fmtTime, minutesSince } from "@/lib/mock/time";
-import type { QueueStatus } from "@/lib/mock/types";
+import { bkkDate, fmtTime } from "@/lib/mock/time";
+import type { CallEvent, QueueStatus } from "@/lib/mock/types";
+
+const EVENT: Record<CallEvent["kind"], { label: string; icon: LucideIcon; cls: string }> = {
+  CALL: { label: "เรียก", icon: Megaphone, cls: "bg-lime text-lime-ink" },
+  NO_SHOW: { label: "บันทึกไม่มา", icon: UserX, cls: "bg-rose-50 text-rose-700" },
+  HOLD: { label: "ข้ามชั่วคราว (ติดตรวจแผนกอื่น)", icon: Hourglass, cls: "bg-amber-50 text-amber-800" },
+};
 
 const ROWS = 12;
 
@@ -112,17 +118,7 @@ function QueuesBoard() {
                 {current ? (
                   <>
                     <CurrentPatient q={current} />
-                    {current.status === "CALLED" && current.calledTime && (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <button onClick={() => update((s) => startExam(s, current.id))} className={`${btn.small} bg-ink text-white hover:bg-black`}>ผู้ป่วยเข้าห้องตรวจ</button>
-                        <button onClick={() => update((s, n) => markNoShow(s, n, current.id))} className={`${btn.small} bg-surface text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50`}>
-                          <UserX size={13} strokeWidth={1.8} /> ไม่มา
-                        </button>
-                        <span className="text-xs text-ink-3">
-                          ไม่มาภายใน {Math.max(0, Math.ceil(NO_SHOW_MINUTES - minutesSince(current.calledTime, now)))} นาที ระบบบันทึกว่าไม่มาเอง
-                        </span>
-                      </div>
-                    )}
+                    {current.status === "CALLED" && <div className="mt-3"><CalledActions q={current} small /></div>}
                   </>
                 ) : (
                   <Empty>ว่าง · ไม่มีผู้ป่วยรอ</Empty>
@@ -214,14 +210,14 @@ function QueuesBoard() {
             <ul className="flex flex-col gap-3.5">
               {calls.map((e) => {
                 const q = state.queues.find((x) => x.id === e.queueId);
-                const call = e.kind === "CALL";
+                const kind = EVENT[e.kind];
                 return (
                   <li key={e.id} className="flex items-center gap-3">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${call ? "bg-lime text-lime-ink" : "bg-rose-50 text-rose-700"}`}>
-                      {call ? <Megaphone size={15} strokeWidth={1.8} /> : <UserX size={15} strokeWidth={1.8} />}
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${kind.cls}`}>
+                      <kind.icon size={15} strokeWidth={1.8} />
                     </span>
                     <div className="min-w-0 flex-1 text-sm">
-                      <div>{call ? "เรียก" : "บันทึกไม่มา"} <span className="font-mono font-semibold">{q?.queueNumber}</span></div>
+                      <div>{kind.label} <span className="font-mono font-semibold">{q?.queueNumber}</span></div>
                       <div className="truncate text-xs text-ink-3">{doctorMap.get(e.doctorId)?.name}</div>
                     </div>
                     <span className="text-xs tabular-nums text-ink-3">{fmtTime(e.at)}</span>

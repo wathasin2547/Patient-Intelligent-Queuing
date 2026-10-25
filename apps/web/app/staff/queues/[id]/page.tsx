@@ -2,16 +2,17 @@
 
 // UC08 review/edit the screening result (staff) + UC09 record the exam result (doctor).
 
-import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, MessageSquareText, Pill, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, Forward, Layers, MessageSquareText, Pill, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { PrescriptionForm } from "@/components/prescription-form";
+import { CalledActions } from "@/components/queue";
 import { btn, Card, Field, LEVEL, LevelChip, LevelDot, Notice, StatusChip, Tag } from "@/components/ui";
-import { DELIVERY_LABEL, editScreening, markNoShow, startExam, updateDeliveryStatus } from "@/lib/mock/actions";
-import { doctorsOnShift, nextShiftStart, positionInLine, queueScore, waitingMinutes } from "@/lib/mock/logic";
+import { DELIVERY_LABEL, editScreening, referQueue, updateDeliveryStatus } from "@/lib/mock/actions";
+import { doctorsOnShift, estimateCallTime, nextShiftStart, positionInLine, queueScore, waitingMinutes } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
-import { fmtShortDate, fmtTime } from "@/lib/mock/time";
+import { bkkDate, fmtShortDate, fmtTime } from "@/lib/mock/time";
 import type { DeliveryStatus, Level, Queue } from "@/lib/mock/types";
 
 function useMe() {
@@ -127,6 +128,8 @@ function QueueDetail({ q }: { q: Queue }) {
 
         <div className="flex flex-col gap-5">
           {isDoctor ? <ResultCard q={q} /> : <><EditCard q={q} /><ResultCard q={q} /></>}
+          {isDoctor && q.status === "IN_PROGRESS" && <ReferCard q={q} />}
+          <OtherQueuesCard q={q} />
           {q.editedBy && (
             <p className="px-2 text-xs text-ink-3">
               แก้ไขล่าสุดโดย {user.get(q.editedBy)?.username} เมื่อ {fmtTime(q.editedAt!)} น. · ผลเดิมของระบบยังเก็บไว้ ใช้นับว่าอัลกอริทึมถูกแก้กี่ครั้ง
@@ -138,6 +141,79 @@ function QueueDetail({ q }: { q: Queue }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** The same patient's other queues today: shows staff and doctors when a patient is held elsewhere. */
+function OtherQueuesCard({ q }: { q: Queue }) {
+  const { state, now } = useMock();
+  const { dept } = useLookups();
+  const { isDoctor } = useMe();
+  const others = state.queues
+    .filter((x) => x.patientId === q.patientId && x.id !== q.id && bkkDate(x.checkInTime) === bkkDate(now))
+    .sort((a, b) => a.checkInTime.localeCompare(b.checkInTime));
+  if (others.length === 0) return null;
+  return (
+    <Card title="คิวอื่นของผู้ป่วยวันนี้" icon={Layers} note="ระบบเรียกได้ทีละคิว ถ้ากำลังตรวจอยู่อีกแผนก ระบบเก็บลำดับไว้">
+      <ul className="flex flex-col gap-2">
+        {others.map((x) => {
+          const eta = estimateCallTime(state, x, now);
+          const row = (
+            <>
+              <span className="font-mono font-semibold">{x.queueNumber}</span>
+              <span className="flex-1 truncate text-ink-2">{dept.get(x.departmentId)?.name}{x.referredFromQueueId === q.id ? " · ส่งต่อจากคิวนี้" : ""}</span>
+              {eta && <span className="text-xs text-ink-3">~{fmtTime(eta)}</span>}
+              <StatusChip status={x.status} />
+            </>
+          );
+          // a doctor may open only their own patients' queues
+          return (
+            <li key={x.id}>
+              {isDoctor ? (
+                <div className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm">{row}</div>
+              ) : (
+                <Link href={`/staff/queues/${x.id}`} className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm hover:bg-[#ecede8]">{row}</Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+/** UC09 alternate flow: send the patient to another department today instead of another day. */
+function ReferCard({ q }: { q: Queue }) {
+  const { state, update } = useMock();
+  const options = state.departments.filter((d) => d.isActive && d.id !== q.departmentId);
+  const [dept, setDept] = useState(options[0]?.id ?? "");
+  const [level, setLevel] = useState<Level>(q.priorityLevel === 1 ? 2 : q.priorityLevel);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function refer() {
+    let outcome: { ok: boolean; text: string } = { ok: false, text: "" };
+    update((s, n) => {
+      const r = referQueue(s, n, { fromQueueId: q.id, departmentId: dept, priorityLevel: level });
+      outcome = r.error ? { ok: false, text: r.error } : { ok: true, text: `ออกคิว ${r.queueNumber} แล้ว ผู้ป่วยได้รับข้อความทาง LINE และรอพร้อมกันได้ทันที` };
+      return r.state;
+    });
+    setResult(outcome);
+  }
+
+  return (
+    <Card title="ส่งต่อแผนกอื่น" icon={Forward} note="ตรวจได้ในวันนี้ ไม่ต้องมาใหม่อีกวัน">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <select value={dept} onChange={(e) => setDept(e.target.value)} className="input">
+          {options.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <select value={level} onChange={(e) => setLevel(Number(e.target.value) as Level)} className="input">
+          {([2, 3, 4, 5] as Level[]).map((l) => <option key={l} value={l}>{LEVEL[l].name}</option>)}
+        </select>
+      </div>
+      <button onClick={refer} disabled={!dept} className={`${btn.secondary} mt-3 w-full`}>ส่งต่อและออกคิว</button>
+      {result && <div className="mt-3"><Notice tone={result.ok ? "lime" : "amber"}>{result.text}</Notice></div>}
+      <p className="mt-3 text-xs text-ink-3">คิวใหม่เริ่มนับเวลารอตั้งแต่ตอนส่งต่อ จึงไม่แซงผู้ป่วยที่รอแผนกนั้นอยู่ก่อน</p>
+    </Card>
   );
 }
 
@@ -314,11 +390,12 @@ function ResultCard({ q }: { q: Queue }) {
   if (q.status === "CALLED" && isDoctor) {
     return (
       <Card title="บันทึกผลการตรวจ" icon={Pill} note="UC09">
-        <p className="text-sm text-ink-3">ระบบเรียกผู้ป่วยแล้ว กดปุ่มด้านล่างเมื่อผู้ป่วยเข้าห้องตรวจ แล้วจึงบันทึกผลได้</p>
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <button onClick={() => update((s) => startExam(s, q.id))} className={btn.primary}>ผู้ป่วยเข้าห้องตรวจ</button>
-          <button onClick={() => update((s, n) => markNoShow(s, n, q.id))} className={btn.danger}>ไม่มา</button>
-        </div>
+        <p className="mb-4 text-sm text-ink-3">
+          {q.visitType === "ONLINE"
+            ? "ระบบส่งลิงก์ห้องตรวจออนไลน์ให้ผู้ป่วยแล้ว เริ่มวิดีโอคอลเพื่อตรวจ แล้วจึงบันทึกผลได้"
+            : "ระบบเรียกผู้ป่วยแล้ว กดปุ่มด้านล่างเมื่อผู้ป่วยเข้าห้องตรวจ แล้วจึงบันทึกผลได้"}
+        </p>
+        <CalledActions q={q} />
       </Card>
     );
   }
@@ -328,7 +405,7 @@ function ResultCard({ q }: { q: Queue }) {
       <Card title="บันทึกผลการตรวจ" icon={Pill} note="UC09 · แพทย์">
         <p className="text-sm text-ink-3">
           {q.status === "WAITING" && "ยังไม่ถึงคิว ระบบจะเรียกผู้ป่วยเองเมื่อแพทย์ว่าง"}
-          {q.status === "CALLED" && "ระบบเรียกผู้ป่วยแล้ว กด “ผู้ป่วยเข้าห้องตรวจ” ที่หน้าจัดการคิวเมื่อผู้ป่วยมาถึง"}
+          {q.status === "CALLED" && (q.visitType === "ONLINE" ? "ระบบส่งลิงก์ห้องตรวจออนไลน์ให้ผู้ป่วยแล้ว รอแพทย์เริ่มวิดีโอคอล" : "ระบบเรียกผู้ป่วยแล้ว กด “ผู้ป่วยเข้าห้องตรวจ” ที่หน้าจัดการคิวเมื่อผู้ป่วยมาถึง")}
           {q.status === "IN_PROGRESS" && "อยู่ระหว่างตรวจ แพทย์เป็นผู้บันทึกผลการตรวจและรายการยา"}
           {(q.status === "NO_SHOW" || q.status === "CANCELLED") && "คิวนี้สิ้นสุดแล้วโดยไม่ได้ตรวจ"}
         </p>

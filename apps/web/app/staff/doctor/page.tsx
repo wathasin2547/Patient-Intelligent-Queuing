@@ -3,14 +3,13 @@
 // Doctor's own screen: the patient in front of them, who comes next, and UC09.
 // Calling the next patient stays automatic (UC13): the doctor never picks from the line.
 
-import { CalendarCheck, CheckCheck, ClipboardList, Stethoscope, Users } from "lucide-react";
+import { CalendarCheck, CheckCheck, ClipboardList, Stethoscope, Users, Video } from "lucide-react";
 import Link from "next/link";
 import { APPOINTMENT_STATUS, btn, Card, Empty, LevelChip, PageHeader, StatusChip, Tag } from "@/components/ui";
-import { PFormula, QueueRow } from "@/components/queue";
-import { markNoShow, startExam } from "@/lib/mock/actions";
-import { NO_SHOW_MINUTES, rankedWaiting, shiftNow } from "@/lib/mock/logic";
+import { CalledActions, PFormula, QueueRow } from "@/components/queue";
+import { rankedWaiting, shiftNow } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
-import { bkkDate, fmtTime, minutesSince } from "@/lib/mock/time";
+import { bkkDate, fmtTime } from "@/lib/mock/time";
 import type { Queue } from "@/lib/mock/types";
 
 export default function DoctorPage() {
@@ -100,11 +99,13 @@ export default function DoctorPage() {
 }
 
 function CurrentCard({ q }: { q: Queue }) {
-  const { state, now, update } = useMock();
+  const { state } = useMock();
   const { code } = useLookups();
   const patient = state.patients.find((p) => p.id === q.patientId);
   const screening = state.screenings.find((s) => s.id === q.screeningId);
   const called = q.status === "CALLED";
+  const online = q.visitType === "ONLINE";
+  const meetingUrl = state.doctors.find((d) => d.id === q.doctorId)?.meetingUrl;
 
   return (
     <div>
@@ -119,6 +120,7 @@ function CurrentCard({ q }: { q: Queue }) {
         <div className="flex flex-col items-end gap-2">
           <StatusChip status={q.status} />
           <LevelChip level={q.priorityLevel} />
+          {online && <Tag tone="sky">ตรวจออนไลน์</Tag>}
         </div>
       </div>
 
@@ -140,21 +142,20 @@ function CurrentCard({ q }: { q: Queue }) {
       )}
       {q.appointmentId && <p className="mt-4 text-sm text-ink-2">ผู้ป่วยมาตามนัดหมาย ไม่ได้ซักประวัติผ่านแชทบอท</p>}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-start gap-2">
         {called ? (
+          <CalledActions q={q} />
+        ) : (
           <>
-            <button onClick={() => update((s) => startExam(s, q.id))} className={btn.primary}>ผู้ป่วยเข้าห้องตรวจ</button>
-            <button onClick={() => update((s, n) => markNoShow(s, n, q.id))} className={btn.danger}>ไม่มา</button>
-            {q.calledTime && (
-              <span className="text-xs text-ink-3">
-                ไม่มาภายใน {Math.max(0, Math.ceil(NO_SHOW_MINUTES - minutesSince(q.calledTime, now)))} นาที ระบบบันทึกว่าไม่มาเอง
-              </span>
+            <Link href={`/staff/queues/${q.id}`} className={btn.accent}>บันทึกผลการตรวจ</Link>
+            {online && meetingUrl && (
+              <a href={meetingUrl} target="_blank" rel="noopener noreferrer" className={btn.secondary}>
+                <Video size={16} strokeWidth={1.8} /> เปิดห้องวิดีโอคอล
+              </a>
             )}
           </>
-        ) : (
-          <Link href={`/staff/queues/${q.id}`} className={btn.accent}>บันทึกผลการตรวจ</Link>
         )}
-        <Link href={`/staff/queues/${q.id}`} className={`${btn.link} ml-auto`}>ดูผลคัดกรองทั้งหมด</Link>
+        <Link href={`/staff/queues/${q.id}`} className={`${btn.link} ml-auto mt-2.5`}>ดูผลคัดกรองทั้งหมด</Link>
       </div>
     </div>
   );

@@ -39,7 +39,19 @@ def rank_queues(
 
 
 def pick_next(
-    queues: list[WaitingQueue], now: datetime, base: dict[int, float], alpha: float
+    queues: list[WaitingQueue],
+    now: datetime,
+    base: dict[int, float],
+    alpha: float,
+    busy_patients: frozenset[str] | set[str] = frozenset(),
 ) -> RankedQueue | None:
-    ranked = rank_queues(queues, now, base, alpha)
-    return ranked[0] if ranked else None
+    """Highest P among patients who are not being called or examined in another queue.
+
+    A busy patient keeps their place (W keeps counting) and is picked at the doctor's next
+    free slot. Nobody is pulled out of an exam, so the others are never called later than
+    they would have been had that patient been present the whole time.
+    """
+    for r in rank_queues(queues, now, base, alpha):
+        if r.queue.patient_id not in busy_patients:
+            return r
+    return None

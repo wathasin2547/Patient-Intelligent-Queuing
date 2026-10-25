@@ -10,7 +10,10 @@ import type {
   ReasonItem, Screening, Shift, SymptomCode, User,
 } from "./types";
 
-export const MOCK_VERSION = 5;
+export const MOCK_VERSION = 7;
+
+/** Mock fallback consultation minutes per department, used by the ETA until real averages exist. */
+const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10 };
 /** The demo always opens at 10:30 Bangkok time so doctors are on shift whenever you run it. */
 export const DEMO_START = "10:30";
 
@@ -36,8 +39,8 @@ export function buildSeed(realNow: number): MockState {
 
   // ── master data ──
   const departments: Department[] = [
-    ...catalog.departments.map((d) => ({ id: deptId(d.key), code: d.key === "SURG" ? "SUR" : d.key, name: d.name, scopeOfCare: d.scopeOfCare, isActive: true })),
-    { id: deptId("GEN"), code: "GEN", name: "เวชปฏิบัติทั่วไป", scopeOfCare: "อาการที่ยังจำแนกแผนกไม่ได้ หรือไม่ได้คะแนนจากแผนกใด", isActive: true },
+    ...catalog.departments.map((d) => ({ id: deptId(d.key), code: d.key === "SURG" ? "SUR" : d.key, name: d.name, scopeOfCare: d.scopeOfCare, defaultServiceMinutes: SERVICE_MINUTES[d.key] ?? 10, isActive: true })),
+    { id: deptId("GEN"), code: "GEN", name: "เวชปฏิบัติทั่วไป", scopeOfCare: "อาการที่ยังจำแนกแผนกไม่ได้ หรือไม่ได้คะแนนจากแผนกใด", defaultServiceMinutes: 8, isActive: true },
   ];
 
   const doctors: Doctor[] = [];
@@ -46,7 +49,7 @@ export function buildSeed(realNow: number): MockState {
   for (const d of [...catalog.doctors, { name: "แพทย์ทดสอบ เวชปฏิบัติ 1", dept: "GEN", startHour: 8, endHour: 16 }]) {
     perDept[d.dept] = (perDept[d.dept] ?? 0) + 1;
     const id = `doc_${d.dept}${perDept[d.dept]}`;
-    doctors.push({ id, name: d.name, departmentId: deptId(d.dept) });
+    doctors.push({ id, name: d.name, departmentId: deptId(d.dept), meetingUrl: `https://meet.example.com/piq-${id.slice(4).toLowerCase()}` });
     doctorHours[id] = [d.startHour, d.endHour];
   }
   const doc = (k: DeptKey, n = 1) => `doc_${k}${n}`;
@@ -213,6 +216,7 @@ export function buildSeed(realNow: number): MockState {
       finishedTime: v.finished ?? null,
       editedBy: v.edited ? "u_staff_med" : null,
       editedAt: v.edited ? new Date(new Date(v.checkIn).getTime() + 4 * MINUTE).toISOString() : null,
+      referredFromQueueId: null,
     };
     queues.push(q);
     return q;
@@ -318,6 +322,9 @@ export function buildSeed(realNow: number): MockState {
   // pt_01 arrived early (10:20) for a 10:40 appointment → W counts from 10:40
   visit({ pt: 1, dept: "MED", doctor: doc("MED", 1), level: APPOINTMENT_LEVEL, status: "WAITING", checkIn: ago(10),
     answers: [], closedCodes: [], appointmentId: arrived.id });
+  // Multi-queue demo: pt_01 also reported a sore throat in the chat, so they wait for ENT and MED at once.
+  visit({ pt: 1, dept: "ENT", doctor: doc("ENT"), level: 4, status: "WAITING", checkIn: ago(18),
+    answers: [[Q_AGE, "60 ปีขึ้นไป"], [Q_CHIEF, "เจ็บคอ"]], freeText: "เจ็บคอ กลืนลำบากมา 3 วัน", closedCodes: ["sore_throat"], llmCodes: ["sore_throat"], llmStatus: "ok" });
 
   // pt_01 also saw a doctor yesterday and still has to choose how to get the medicine (UC06).
   const yesterday = addDays(today, -1);
@@ -325,7 +332,7 @@ export function buildSeed(realNow: number): MockState {
     id: "q_yesterday_1", patientId: "pt_01", screeningId: null, appointmentId: null, departmentId: deptId("MED"),
     doctorId: doc("MED", 2), queueNumber: "MED-021", visitType: "ONSITE", priorityLevel: 5, status: "DONE",
     checkInTime: at("13:05", yesterday), calledTime: at("13:30", yesterday), finishedTime: at("13:44", yesterday),
-    editedBy: null, editedAt: null,
+    editedBy: null, editedAt: null, referredFromQueueId: null,
   };
   queues.push(yQueue);
   const prescriptions: Prescription[] = [{
@@ -351,5 +358,6 @@ export function buildSeed(realNow: number): MockState {
     ],
     callEvents: [],
     acknowledgedRedFlags: [],
+    settings: { maxActiveQueues: 3 },
   };
 }

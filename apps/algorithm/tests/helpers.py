@@ -25,5 +25,5 @@ def inp(*answers, **kw) -> TriageInput:
     return TriageInput(closed_answers=list(answers), **kw)
 
 
-def queue(id, level, minutes_ago, now=MORNING, dept="MED", doctor="MED-1") -> WaitingQueue:
-    return WaitingQueue(id, dept, doctor, level, now - timedelta(minutes=minutes_ago))
+def queue(id, level, minutes_ago, now=MORNING, dept="MED", doctor="MED-1", patient=None) -> WaitingQueue:
+    return WaitingQueue(id, dept, doctor, level, now - timedelta(minutes=minutes_ago), patient or f"pt-{id}")
