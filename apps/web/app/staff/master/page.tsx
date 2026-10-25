@@ -7,7 +7,7 @@
 import { Building2, KeyRound, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
-import { saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
+import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
 import { newId } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import type { Level, Question, Role, SymptomCode } from "@/lib/mock/types";
@@ -381,21 +381,29 @@ function Questions() {
 
 // ── users ──
 
+const EMPTY_USER = { username: "", password: "", role: "STAFF" as Role, departmentId: "", doctorId: "" };
+
 function Users() {
   const { state, update } = useMock();
-  const { dept } = useLookups();
-  const [form, setForm] = useState<{ username: string; password: string; role: Role; departmentId: string }>({ username: "", password: "", role: "STAFF", departmentId: "" });
+  const { dept, doctor: doctorMap } = useLookups();
+  const [form, setForm] = useState(EMPTY_USER);
   const [err, setErr] = useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+  const linked = new Set(state.users.map((u) => u.doctorId).filter(Boolean));
+  const freeDoctors = state.doctors.filter((d) => !linked.has(d.id));
 
   function add() {
     const username = form.username.trim();
     if (!/^[a-z0-9._]{3,}$/.test(username)) return setErr("ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษตัวเล็ก ตัวเลข . หรือ _ อย่างน้อย 3 ตัว");
     if (state.users.some((u) => u.username === username)) return setErr("ชื่อผู้ใช้นี้มีอยู่แล้ว");
     if (form.password.length < 8) return setErr("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+    const isDoctor = form.role === "DOCTOR";
+    if (isDoctor && !form.doctorId) return setErr("บัญชีแพทย์ต้องเลือกรายชื่อแพทย์ที่ใช้บัญชีนี้");
+    // a doctor account belongs to the doctor's own department
+    const departmentId = isDoctor ? doctorMap.get(form.doctorId)!.departmentId : form.departmentId || null;
     // Mock: the password is not stored. The real API hashes it with bcrypt before saving.
-    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId: form.departmentId || null, isActive: true }));
-    setForm({ username: "", password: "", role: "STAFF", departmentId: "" });
+    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId, doctorId: isDoctor ? form.doctorId : null, isActive: true }));
+    setForm(EMPTY_USER);
     setErr(null);
   }
 
@@ -408,7 +416,9 @@ function Users() {
               <Avatar text={u.username.slice(0, 2).toUpperCase()} dark={u.role === "ADMIN"} />
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm">{u.username}</div>
-                <div className="text-xs text-ink-3">{u.role === "ADMIN" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"} · {u.departmentId ? dept.get(u.departmentId)?.name : "ทุกแผนก"}</div>
+                <div className="text-xs text-ink-3">
+                  {ROLE_LABEL[u.role]} · {u.doctorId ? doctorMap.get(u.doctorId)?.name : u.departmentId ? dept.get(u.departmentId)?.name : "ทุกแผนก"}
+                </div>
               </div>
               {u.id === state.sessionUserId ? <Tag tone="lime">บัญชีของคุณ</Tag> : <ActiveToggle active={u.isActive} onChange={(v) => update((s) => saveUser(s, { ...u, isActive: v }))} />}
             </li>
@@ -422,17 +432,26 @@ function Users() {
           <div className="grid grid-cols-2 gap-2">
             <Field label="บทบาท">
               <select value={form.role} onChange={(e) => set({ role: e.target.value as Role })} className="input">
-                <option value="STAFF">เจ้าหน้าที่</option>
-                <option value="ADMIN">ผู้ดูแลระบบ</option>
+                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
             </Field>
-            <Field label="แผนก">
-              <select value={form.departmentId} onChange={(e) => set({ departmentId: e.target.value })} className="input">
-                <option value="">ทุกแผนก</option>
-                {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </Field>
+            {form.role === "DOCTOR" ? (
+              <Field label="แพทย์">
+                <select value={form.doctorId} onChange={(e) => set({ doctorId: e.target.value })} className="input">
+                  <option value="">เลือกแพทย์</option>
+                  {freeDoctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </Field>
+            ) : (
+              <Field label="แผนก">
+                <select value={form.departmentId} onChange={(e) => set({ departmentId: e.target.value })} className="input">
+                  <option value="">ทุกแผนก</option>
+                  {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </Field>
+            )}
           </div>
+          {form.role === "DOCTOR" && <p className="text-xs text-ink-3">แพทย์เห็นเฉพาะคิวของตนเองและบันทึกผลการตรวจ (UC09) · แพทย์ 1 คนมีได้ 1 บัญชี</p>}
           <button onClick={add} className={`${btn.primary} mt-1`}>สร้างบัญชี</button>
           {err && <Notice tone="rose">{err}</Notice>}
         </div>

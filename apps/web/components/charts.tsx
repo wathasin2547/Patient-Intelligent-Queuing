@@ -1,12 +1,7 @@
-// Small dependency-free charts for the dashboard (UC07). Each is single-series, so the card
-// title names the measure and there is no legend box. Hover any mark for its exact value.
-
 import { LEVEL } from "./ui";
 import type { Level } from "@/lib/mock/types";
 
 export type BarDatum = { key: string; label: string; value: number; detail?: string; flag?: string; future?: boolean };
-
-/** Horizontal pill bars — magnitude per category (waiting patients per department). */
 export function HBarChart({ data, unit }: { data: BarDatum[]; unit: string }) {
   const top = Math.max(...data.map((d) => d.value), 1);
   return (

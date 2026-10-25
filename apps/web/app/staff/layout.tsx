@@ -1,35 +1,48 @@
 "use client";
 
-import { Activity, ArrowUpRight, CalendarDays, Clock3, LayoutGrid, ListOrdered, LogOut, RotateCcw, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Activity, ArrowUpRight, CalendarDays, Clock3, LayoutGrid, ListOrdered, LogOut, RotateCcw, SlidersHorizontal, Stethoscope, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { MockBadge } from "@/components/ui";
+import { homeOf, ROLE_LABEL } from "@/lib/mock/actions";
 import { NO_SHOW_MINUTES } from "@/lib/mock/logic";
 import { useMock } from "@/lib/mock/store";
 import { fmtDate, fmtTime } from "@/lib/mock/time";
+import type { Role } from "@/lib/mock/types";
 
-const NAV: { href: string; label: string; uc: string; icon: LucideIcon; admin?: boolean }[] = [
-  { href: "/staff", label: "ภาพรวมคิว", uc: "UC07", icon: LayoutGrid },
-  { href: "/staff/queues", label: "จัดการคิว", uc: "UC10", icon: ListOrdered },
-  { href: "/staff/schedule", label: "ตารางเวรและนัดหมาย", uc: "UC11", icon: CalendarDays },
-  { href: "/staff/master", label: "ข้อมูลพื้นฐาน", uc: "UC12", icon: SlidersHorizontal, admin: true },
+const NAV: { href: string; label: string; uc: string; icon: LucideIcon; roles: Role[] }[] = [
+  { href: "/staff/doctor", label: "คิวของฉัน", uc: "UC09", icon: Stethoscope, roles: ["DOCTOR"] },
+  { href: "/staff", label: "ภาพรวมคิว", uc: "UC07", icon: LayoutGrid, roles: ["STAFF", "ADMIN"] },
+  { href: "/staff/queues", label: "จัดการคิว", uc: "UC10", icon: ListOrdered, roles: ["STAFF", "ADMIN"] },
+  { href: "/staff/schedule", label: "ตารางเวรและนัดหมาย", uc: "UC11", icon: CalendarDays, roles: ["STAFF", "ADMIN"] },
+  { href: "/staff/master", label: "ข้อมูลพื้นฐาน", uc: "UC12", icon: SlidersHorizontal, roles: ["ADMIN"] },
 ];
+
+/** A doctor may open only their own page and the detail of a queue; the rest belongs to staff. */
+function allowed(role: Role, pathname: string) {
+  const doctorPath = pathname.startsWith("/staff/doctor") || /^\/staff\/queues\/[^/]+$/.test(pathname);
+  return role === "DOCTOR" ? doctorPath : !pathname.startsWith("/staff/doctor");
+}
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const { state, now, update, advance, reset } = useMock();
   const router = useRouter();
   const pathname = usePathname();
   const user = state.users.find((u) => u.id === state.sessionUserId);
+  const ok = user ? allowed(user.role, pathname) : false;
 
   useEffect(() => {
     if (!user) router.replace("/login");
-  }, [user, router]);
+    else if (!ok) router.replace(homeOf(user.role));
+  }, [user, ok, router]);
 
-  if (!user) return null;
+  if (!user || !ok) return null;
 
   const deptName = state.departments.find((d) => d.id === user.departmentId)?.name;
-  const nav = NAV.filter((n) => !n.admin || user.role === "ADMIN");
+  const doctorName = user.doctorId ? state.doctors.find((d) => d.id === user.doctorId)?.name : null;
+  const nav = NAV.filter((n) => n.roles.includes(user.role));
+  const home = homeOf(user.role);
   const active = (href: string) => (href === "/staff" ? pathname === "/staff" : pathname.startsWith(href));
   const redFlags = state.screenings.filter((s) => s.isRedFlag && !state.acknowledgedRedFlags.includes(s.id)).length;
   const logout = () => {
@@ -40,7 +53,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col px-5 py-7 lg:flex">
-        <Link href="/staff" className="flex items-center gap-3 px-2">
+        <Link href={home} className="flex items-center gap-3 px-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lime">
             <Activity size={19} strokeWidth={2.2} />
           </span>
@@ -79,7 +92,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           </span>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{user.username}</div>
-            <div className="truncate text-xs text-ink-3">{user.role === "ADMIN" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"}{deptName ? ` · ${deptName}` : ""}</div>
+            <div className="truncate text-xs text-ink-3">{ROLE_LABEL[user.role]}{deptName ? ` · ${deptName}` : ""}</div>
+            {doctorName && <div className="truncate text-xs text-ink-3">{doctorName}</div>}
           </div>
           <button onClick={logout} title="ออกจากระบบ" className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 hover:bg-subtle hover:text-ink">
             <LogOut size={17} strokeWidth={1.8} />
@@ -89,7 +103,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-5 sm:px-8 lg:pt-7">
-          <Link href="/staff" className="flex items-center gap-2 lg:hidden">
+          <Link href={home} className="flex items-center gap-2 lg:hidden">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-lime"><Activity size={17} strokeWidth={2.2} /></span>
             <span className="font-semibold">PIQ</span>
           </Link>

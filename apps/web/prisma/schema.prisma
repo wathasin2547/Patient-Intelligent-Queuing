@@ -158,7 +158,8 @@ model User {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
   username     String  @unique
   passwordHash String
-  role         String // STAFF | ADMIN
+  role         String // STAFF | ADMIN | DOCTOR
   departmentId String? @db.ObjectId
+  doctorId     String? @db.ObjectId // DOCTOR accounts only
   isActive     Boolean @default(true)
 }

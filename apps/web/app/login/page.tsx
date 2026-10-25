@@ -1,18 +1,19 @@
 "use client";
 
-// UC02 — staff sign in with username + password. Mock: the username is checked
+// UC02 — staff and doctors sign in with username + password. Mock: the username is checked
 // against the user list (active/suspended); the password is not verified yet.
 
 import { Activity, ArrowRight, ListOrdered, Stethoscope } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { btn, MockBadge, Notice } from "@/components/ui";
-import { login } from "@/lib/mock/actions";
+import { homeOf, login } from "@/lib/mock/actions";
 import { useMock } from "@/lib/mock/store";
 
 const DEMO = [
   { username: "admin", label: "ผู้ดูแลระบบ" },
   { username: "staff.med", label: "เจ้าหน้าที่อายุรกรรม" },
+  { username: "doc.med1", label: "แพทย์อายุรกรรม" },
   { username: "staff.old", label: "บัญชีถูกระงับ" },
 ];
 
@@ -29,7 +30,8 @@ export default function LoginPage() {
     const r = login(state, username);
     if (r.error) return setError(r.error);
     update(() => r.state);
-    router.push("/staff");
+    const role = r.state.users.find((u) => u.id === r.state.sessionUserId)!.role;
+    router.push(homeOf(role));
   }
 
   return (

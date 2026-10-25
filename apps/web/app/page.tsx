@@ -1,4 +1,4 @@
-import { Activity, ArrowUpRight, CalendarDays, LayoutGrid, ListOrdered, LogIn, MonitorPlay, Pill, SlidersHorizontal, Smartphone, Ticket, UserRound, type LucideIcon } from "lucide-react";
+import { Activity, ArrowUpRight, CalendarDays, LayoutGrid, ListOrdered, LogIn, MonitorPlay, Pill, SlidersHorizontal, Smartphone, Stethoscope, Ticket, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { MockBadge } from "@/components/ui";
 
@@ -7,7 +7,8 @@ type Item = { href: string; title: string; uc: string; icon: LucideIcon };
 const STAFF: Item[] = [
   { href: "/login", title: "เข้าสู่ระบบ", uc: "UC02", icon: LogIn },
   { href: "/staff", title: "ภาพรวมคิว (Dashboard)", uc: "UC07 → UC10", icon: LayoutGrid },
-  { href: "/staff/queues", title: "จัดการคิวและการเรียกคิว", uc: "UC08 · UC09 · UC10 · UC13", icon: ListOrdered },
+  { href: "/staff/queues", title: "จัดการคิวและการเรียกคิว", uc: "UC08 · UC10 · UC13", icon: ListOrdered },
+  { href: "/staff/doctor", title: "คิวของฉัน (แพทย์)", uc: "UC09 · DOCTOR", icon: Stethoscope },
   { href: "/staff/schedule", title: "ตารางเวรและคิวนัดหมาย", uc: "UC11", icon: CalendarDays },
   { href: "/staff/master", title: "ข้อมูลพื้นฐานของระบบ", uc: "UC12 · ADMIN", icon: SlidersHorizontal },
 ];

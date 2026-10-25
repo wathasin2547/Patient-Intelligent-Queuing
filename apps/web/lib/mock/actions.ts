@@ -5,7 +5,7 @@ import { APPOINTMENT_LEVEL, newId, nextQueueNumber, nextShiftStart, pickDoctor, 
 import { addDays, bkkDate } from "./time";
 import type {
   Appointment, Delivery, DeliveryMethod, DeliveryStatus, Department, Doctor, Level, MockState, Patient,
-  PrescriptionItem, Question, Queue, Screening, Shift, SymptomCode, User,
+  PrescriptionItem, Question, Queue, Role, Screening, Shift, SymptomCode, User,
 } from "./types";
 
 const iso = (now: number) => new Date(now).toISOString();
@@ -17,6 +17,11 @@ function notify(s: MockState, patientId: string, now: number, text: string): Moc
 const deptName = (s: MockState, id: string | null) => s.departments.find((d) => d.id === id)?.name ?? "-";
 
 // ── UC02 ──
+
+export const ROLE_LABEL: Record<Role, string> = { ADMIN: "ผู้ดูแลระบบ", STAFF: "เจ้าหน้าที่", DOCTOR: "แพทย์" };
+
+/** Where each role lands after login: a doctor only works their own queue. */
+export const homeOf = (role: Role) => (role === "DOCTOR" ? "/staff/doctor" : "/staff");
 
 export function login(s: MockState, username: string): { state: MockState; error?: string } {
   const u = s.users.find((x) => x.username === username.trim());

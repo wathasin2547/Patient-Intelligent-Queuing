@@ -28,10 +28,11 @@ npm run dev               # http://localhost:3000
 
 | หน้า | Use case |
 |---|---|
-| `/login` | UC02 (บัญชีทดลอง `admin`, `staff.med`; `staff.old` = ถูกระงับ) |
+| `/login` | UC02 (บัญชีทดลอง `admin`, `staff.med`, แพทย์ `doc.med1` / `doc.surg1`; `staff.old` = ถูกระงับ) |
 | `/staff` | UC07 Dashboard (กราฟรายแผนก รายชั่วโมง ระดับสี + คิวของแพทย์แต่ละท่าน) |
 | `/staff/queues` | UC10 จัดการคิว + UC13 ประวัติการเรียกคิว + ปุ่มจำลองผู้ป่วยรับคิวจาก LINE |
-| `/staff/queues/[id]` | UC08 ตรวจสอบ/แก้ไขผลคัดกรอง + UC09 บันทึกผลการตรวจ |
+| `/staff/doctor` | คิวของแพทย์ (role DOCTOR): ผู้ป่วยตรงหน้า ลำดับถัดไป นัดหมายวันนี้ |
+| `/staff/queues/[id]` | UC08 ตรวจสอบ/แก้ไขผลคัดกรอง (เจ้าหน้าที่) + UC09 บันทึกผลการตรวจ (แพทย์เท่านั้น) |
 | `/staff/schedule` | UC11 ตารางเวร + คิวนัดหมาย (ยืนยันมาถึง → เข้าคิว) |
 | `/staff/master` | UC12 ข้อมูลพื้นฐาน (ADMIN) |
 | `/liff`, `/liff/register`, `/liff/queue`, `/liff/medicine` | UC01, UC05, UC06 ฝั่งผู้ป่วย |

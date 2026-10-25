@@ -10,7 +10,7 @@ import type {
   ReasonItem, Screening, Shift, SymptomCode, User,
 } from "./types";
 
-export const MOCK_VERSION = 4;
+export const MOCK_VERSION = 5;
 /** The demo always opens at 10:30 Bangkok time so doctors are on shift whenever you run it. */
 export const DEMO_START = "10:30";
 
@@ -74,10 +74,12 @@ export function buildSeed(realNow: number): MockState {
   }));
 
   const users: User[] = [
-    { id: "u_admin", username: "admin", role: "ADMIN", departmentId: null, isActive: true },
-    { id: "u_staff_med", username: "staff.med", role: "STAFF", departmentId: deptId("MED"), isActive: true },
-    { id: "u_staff_surg", username: "staff.surg", role: "STAFF", departmentId: deptId("SURG"), isActive: true },
-    { id: "u_staff_old", username: "staff.old", role: "STAFF", departmentId: deptId("ENT"), isActive: false },
+    { id: "u_admin", username: "admin", role: "ADMIN", departmentId: null, doctorId: null, isActive: true },
+    { id: "u_staff_med", username: "staff.med", role: "STAFF", departmentId: deptId("MED"), doctorId: null, isActive: true },
+    { id: "u_staff_surg", username: "staff.surg", role: "STAFF", departmentId: deptId("SURG"), doctorId: null, isActive: true },
+    { id: "u_staff_old", username: "staff.old", role: "STAFF", departmentId: deptId("ENT"), doctorId: null, isActive: false },
+    { id: "u_doc_med1", username: "doc.med1", role: "DOCTOR", departmentId: deptId("MED"), doctorId: doc("MED"), isActive: true },
+    { id: "u_doc_surg1", username: "doc.surg1", role: "DOCTOR", departmentId: deptId("SURG"), doctorId: doc("SURG"), isActive: true },
   ];
 
   // ── shifts: 7 days starting today ──

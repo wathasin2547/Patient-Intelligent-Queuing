@@ -2,7 +2,7 @@
 // (docs/thesis/images/er-diagram.png) so the mock store can later be swapped for
 // real API calls without renaming anything. All timestamps are ISO strings in UTC.
 
-export type Role = "STAFF" | "ADMIN";
+export type Role = "STAFF" | "ADMIN" | "DOCTOR";
 export type Level = 1 | 2 | 3 | 4 | 5;
 export type QueueStatus = "WAITING" | "CALLED" | "IN_PROGRESS" | "DONE" | "NO_SHOW" | "CANCELLED";
 export type AppointmentStatus = "SCHEDULED" | "ARRIVED" | "CANCELLED" | "MISSED";
@@ -104,6 +104,7 @@ export type User = {
   username: string;
   role: Role;
   departmentId: string | null;
+  doctorId: string | null; // set only for DOCTOR accounts: the doctor whose queue this login works
   isActive: boolean;
 };
 
