@@ -1,7 +1,3 @@
-"use client";
-
-// UC07 Dashboard — extends UC10: the same queue data, shown as graphs + per-doctor lines.
-
 import { ArrowRight, BarChart3, CalendarCheck, Megaphone, Siren, Stethoscope, Timer, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
