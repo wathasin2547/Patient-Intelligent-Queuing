@@ -29,6 +29,7 @@ async function clearAll() {
   await prisma.refillSchedule.deleteMany();
   await prisma.prescription.deleteMany();
   await prisma.queue.deleteMany();
+  await prisma.appointment.deleteMany();
   await prisma.screening.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.shift.deleteMany();
@@ -51,7 +52,8 @@ async function main() {
   const deptId = {} as Record<DeptKey, string>;
   for (const d of departments) {
     const created = await prisma.department.create({
-      data: { name: d.name, scopeOfCare: d.scopeOfCare },
+      // code is the queue-number prefix ("MED-001") used by lib/triage/save.ts
+      data: { name: d.name, code: d.key, scopeOfCare: d.scopeOfCare },
     });
     deptId[d.key] = created.id;
   }

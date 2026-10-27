@@ -9,7 +9,7 @@ export type AppointmentStatus = "SCHEDULED" | "ARRIVED" | "CANCELLED" | "MISSED"
 export type DeliveryMethod = "PICKUP" | "SHIP";
 export type DeliveryStatus = "PENDING" | "PREPARING" | "READY" | "SHIPPED" | "COMPLETED";
 
-// ── PostgreSQL side ──
+// ── Service data (MongoDB, relations declared in Prisma) ──
 
 export type Patient = {
   id: string;
@@ -113,7 +113,7 @@ export type User = {
   isActive: boolean;
 };
 
-// ── MongoDB side ──
+// ── Screening knowledge base and results (MongoDB) ──
 
 export type QuestionOption = { label: string; symptomCode: string | null };
 

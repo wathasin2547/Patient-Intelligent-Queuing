@@ -72,14 +72,16 @@ class MongoRepository:
                 doctor_id=str(q["doctorId"]) if q.get("doctorId") else None,
                 priority_level=q["priorityLevel"],
                 check_in_time=q["checkInTime"],
-                patient_id=str(q["patientId"]),
+                # queues saved before Queue.patientId existed have no patient: never treated as busy
+                patient_id=str(q.get("patientId", "")),
             )
             for q in self.db["Queue"].find({"status": "WAITING"})
         ]
 
     def busy_patient_ids(self) -> set[str]:
         """Patients being called or examined right now, in any department."""
-        return {str(q["patientId"]) for q in self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}})}
+        busy = self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}, "patientId": {"$exists": True}})
+        return {str(q["patientId"]) for q in busy}
 
     def ping(self) -> None:
         self.client.admin.command("ping")

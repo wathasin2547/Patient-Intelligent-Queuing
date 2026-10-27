@@ -47,6 +47,18 @@ export async function findNextQuestion(answers: Answer[]) {
   return all.find((q) => !done.has(q.id) && matches(q.dependsOn, codes)) ?? null;
 }
 
+// Red flag answered -> stop asking and triage right away (red flags are checked before anything else)
+export async function answeredRedFlag(answers: Answer[]): Promise<boolean> {
+  const qs = await prisma.question.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
+  const byId = new Map(qs.map((q) => [q.id, q]));
+  const codes = answers
+    .map((a) => (byId.get(a.questionId)?.options as Option[] | undefined)?.[a.optionIndex]?.symptomCode)
+    .filter((c): c is string => Boolean(c));
+  if (codes.length === 0) return false;
+  const red = await prisma.symptomCode.count({ where: { code: { in: codes }, isRedFlag: true, isActive: true } });
+  return red > 0;
+}
+
 // สร้างข้อความคำถาม + ปุ่ม โดยแต่ละปุ่มพกคำตอบเดิม + คำตอบใหม่ไปด้วย
 export function buildQuestionMessage(
   q: { id: string; questionText: string; options: unknown },

@@ -23,7 +23,10 @@ export async function formatTriageResult(r: TriageResult): Promise<string> {
     `แผนกที่แนะนำ: ${deptName}`,
     `ความเร่งด่วน: ระดับ ${r.priorityLevel} (${LEVEL_TEXT[r.priorityLevel] ?? "-"})`,
   ];
-  if (r.isRedFlag) lines.push("พบอาการที่ควรพบแพทย์ทันที");
-  if (r.noDoctorOnShift) lines.push("ขณะนี้ยังไม่มีแพทย์เข้าเวร");
+  if (r.isRedFlag) {
+    // emergency: no queue number — send the patient to the emergency point now
+    return "พบอาการที่ควรได้รับการดูแลทันที\nกรุณาไปที่จุดบริการฉุกเฉินของโรงพยาบาล หรือโทร 1669 ระบบจะไม่ออกเลขคิวปกติให้";
+  }
+  // no-doctor text (with the next shift time) is added by blockMessage in lib/triage/save.ts
   return lines.join("\n");
 }

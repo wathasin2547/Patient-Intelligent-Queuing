@@ -8,13 +8,20 @@ export type TriageRequest = {
   symptomChanged?: boolean;
 };
 
+// Same fields as TriageResponse in apps/algorithm/main.py — reason and scores must reach the database (rule 3)
 export type TriageResult = {
   symptomCodes: string[];
+  llmCodes: string[];
+  llmStatus: string;
   isRedFlag: boolean;
+  redFlagCodes: string[];
+  departmentScores: Record<string, number>;
   assignedDepartment: string | null;
   priorityLevel: number;
   onlineEligible: boolean;
+  reason: { code: string; weight: number; department: string }[];
   doctorId: string | null;
+  queueScore: number | null;
   noDoctorOnShift: boolean;
   nextShiftStart: string | null;
   warnings: string[];
