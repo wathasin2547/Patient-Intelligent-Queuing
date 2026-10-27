@@ -32,7 +32,7 @@ export default function DisplayPage() {
     <div className="flex min-h-screen flex-col bg-board p-4 text-white sm:p-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-ink"><Activity size={22} strokeWidth={2.2} /></span>
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge"><Activity size={22} strokeWidth={2.2} /></span>
           <div>
             <div className="text-2xl font-semibold">จอเรียกคิว</div>
             <div className="text-base text-white/80">{fmtDate(now)}</div>

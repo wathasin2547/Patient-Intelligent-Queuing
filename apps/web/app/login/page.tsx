@@ -1,6 +1,6 @@
 // UC02 — staff and doctors sign in with username + password (NextAuth Credentials, see auth.ts).
 
-import { Activity } from "lucide-react";
+import { Activity, ListOrdered, Stethoscope } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { homeOf } from "@/lib/auth/schema";
@@ -18,12 +18,18 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="relative hidden flex-col justify-between overflow-hidden bg-brand p-10 text-white lg:flex">
           <Logo />
           <div>
-            <h2 className="text-[44px] font-semibold leading-[1.1] tracking-tight">
-              Patient
+            {/* two lines, each with an icon pill like the old "จัดคิว [ ] ผู้ป่วย" headline */}
+            <h2 className="text-[40px] font-semibold leading-[1.3] tracking-tight">
+              <span className="whitespace-nowrap">
+                Patient
+                <Pill className="bg-coral text-ink"><ListOrdered size={20} strokeWidth={2} /></Pill>
+                Intelligent
+              </span>
               <br />
-              Intelligent
-              <br />
-              <span className="text-accent">Queuing</span>
+              <span className="whitespace-nowrap">
+                <span className="text-accent">Queuing</span>
+                <Pill className="bg-mint text-ink"><Stethoscope size={20} strokeWidth={2} /></Pill>
+              </span>
             </h2>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/80">
               ระบบคัดกรองผ่าน LINE จำแนกแผนก และเรียกคิวเองเมื่อแพทย์ว่าง โดยไม่ให้ผู้ป่วยอาการเบารอนานเกินไป
@@ -50,9 +56,17 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   );
 }
 
+function Pill({ className, children }: { className: string; children: React.ReactNode }) {
+  return (
+    <span aria-hidden className={`mx-2 inline-flex h-10 w-16 translate-y-0.5 items-center justify-center rounded-full align-baseline ${className}`}>
+      {children}
+    </span>
+  );
+}
+
 function Logo() {
   return (
-    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-ink" role="img" aria-label="Patient Intelligent Queuing">
+    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge" role="img" aria-label="Patient Intelligent Queuing">
       <Activity size={20} strokeWidth={2.2} />
     </span>
   );

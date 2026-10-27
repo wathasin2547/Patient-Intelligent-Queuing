@@ -1,5 +1,6 @@
 import { Activity, ArrowUpRight, CalendarDays, LayoutGrid, ListOrdered, LogIn, MonitorPlay, Pill, SlidersHorizontal, Smartphone, Stethoscope, Ticket, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { MockBadge } from "@/components/ui";
 
 type Item = { href: string; title: string; uc: string; icon: LucideIcon };
@@ -19,13 +20,16 @@ const PATIENT: Item[] = [
   { href: "/liff/medicine", title: "เลือกวิธีรับยา", uc: "UC06", icon: Pill },
 ];
 
-export default function Home() {
+/** Map of every screen, for the developers only: `next dev` shows it, a production build answers 404. */
+export default function DevIndex() {
+  if (process.env.NODE_ENV === "production") notFound();
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-accent"><Activity size={19} strokeWidth={2.2} /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge"><Activity size={19} strokeWidth={2.2} /></span>
           <span className="font-semibold">PIQ</span>
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900">สำหรับผู้พัฒนาเท่านั้น</span>
         </div>
         <MockBadge />
       </div>

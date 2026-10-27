@@ -57,7 +57,7 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
       {/* Navy sidebar: white text 17.7:1, inactive items white/75 (9.9:1). */}
       <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col bg-brand px-4 py-7 text-white lg:flex">
         <Link href={home} className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-ink">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge">
             <Activity size={19} strokeWidth={2.2} />
           </span>
           <span>
@@ -111,7 +111,7 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-5 sm:px-8 lg:pt-7">
           <Link href={home} className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-accent"><Activity size={17} strokeWidth={2.2} /></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge"><Activity size={17} strokeWidth={2.2} /></span>
             <span className="font-semibold">PIQ</span>
           </Link>
           <div className="hidden text-sm text-ink-3 lg:block">{fmtDate(now)}</div>

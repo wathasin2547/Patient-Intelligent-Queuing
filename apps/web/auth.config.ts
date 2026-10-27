@@ -10,9 +10,13 @@ export const authConfig = {
   trustHost: true,
   providers: [],
   callbacks: {
-    // runs in proxy.ts for /staff and /login
+    // runs in proxy.ts for /, /login and /staff
     authorized({ auth, request: { nextUrl } }) {
       const user = auth?.user;
+      if (nextUrl.pathname === "/") {
+        // the app always starts at login (the developers' screen map lives at /dev)
+        return Response.redirect(new URL(user ? homeOf(user.role) : "/login", nextUrl));
+      }
       if (nextUrl.pathname === "/login") {
         return user ? Response.redirect(new URL(homeOf(user.role), nextUrl)) : true; // already signed in
       }

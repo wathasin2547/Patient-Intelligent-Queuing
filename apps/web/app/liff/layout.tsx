@@ -27,7 +27,7 @@ export default function LiffLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen flex-col items-center sm:py-6">
       <div className="flex w-full max-w-[420px] flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-0">
-        <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวม">
+        <Link href="/dev" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวมสำหรับผู้พัฒนา">
           <House size={16} strokeWidth={1.8} />
         </Link>
         <select

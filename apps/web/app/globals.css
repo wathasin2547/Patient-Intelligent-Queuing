@@ -28,6 +28,10 @@
   --color-cta: #ffc72c;
   --color-cta-strong: #f2b300;
   --color-cta-edge: #d99a00;
+  /* Decorative pills on the navy login panel — each a different hue from the yellow logo.
+     Navy icon on coral 7.7:1, on mint 12:1. */
+  --color-coral: #ff8a65;
+  --color-mint: #5eead4;
 
   --color-primary: #0077b6; /* links, focus ring, info — 4.9:1 on white */
   --color-primary-strong: #023e8a; /* hover / links on tinted backgrounds */
