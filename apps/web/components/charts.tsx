@@ -18,7 +18,7 @@ export function HBarChart({ data, unit }: { data: BarDatum[]; unit: string }) {
             </span>
           </div>
           <div className="h-2.5 rounded-full bg-subtle">
-            <div className="h-2.5 rounded-full bg-ink transition-[width]" style={{ width: `${(d.value / top) * 100}%`, minWidth: d.value ? 10 : 0 }} />
+            <div className="h-2.5 rounded-full bg-primary transition-[width] group-hover:bg-primary-strong" style={{ width: `${(d.value / top) * 100}%`, minWidth: d.value ? 10 : 0 }} />
           </div>
           {d.detail && (
             <div className="pointer-events-none absolute -top-8 right-0 z-10 hidden whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] text-white group-hover:block">
@@ -31,7 +31,7 @@ export function HBarChart({ data, unit }: { data: BarDatum[]; unit: string }) {
   );
 }
 
-/** Columns over time; the highlighted column (current hour) is lime with its value pinned above. */
+/** Columns over time; the highlighted column (current hour) is navy with its value pinned above. */
 export function ColumnChart({ data, highlight, unit }: { data: BarDatum[]; highlight?: string; unit: string }) {
   const top = Math.max(...data.map((d) => d.value), 1);
   const ceil = niceCeil(top);
@@ -39,7 +39,7 @@ export function ColumnChart({ data, highlight, unit }: { data: BarDatum[]; highl
     <div>
       <div className="relative h-44">
         {[0, 0.5, 1].map((f) => (
-          <div key={f} className="absolute inset-x-0 border-t border-subtle" style={{ bottom: `${f * 100}%` }}>
+          <div key={f} className="absolute inset-x-0 border-t border-line/70" style={{ bottom: `${f * 100}%` }}>
             <span className="absolute -top-2.5 right-0 bg-surface pl-1 text-[10px] tabular-nums text-ink-3">{Math.round(ceil * f)}</span>
           </div>
         ))}
@@ -53,7 +53,7 @@ export function ColumnChart({ data, highlight, unit }: { data: BarDatum[]; highl
                   <div className="h-full w-full max-w-8 rounded-full border border-dashed border-ink-3/40" />
                 ) : (
                   <div
-                    className={`w-full max-w-8 rounded-t-[12px] rounded-b-[4px] transition-colors ${on ? "bg-lime-strong" : "bg-[#e7e8e2] group-hover:bg-ink"}`}
+                    className={`w-full max-w-8 rounded-t-[12px] rounded-b-[4px] transition-colors ${on ? "bg-ink" : "bg-ocean-300 group-hover:bg-primary"}`}
                     style={{ height: `${(d.value / ceil) * 100}%`, minHeight: d.value ? 6 : 0 }}
                   />
                 )}

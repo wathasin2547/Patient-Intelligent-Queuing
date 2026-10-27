@@ -11,7 +11,7 @@ import { useLookups, useMock } from "@/lib/mock/store";
 import { addDays, atBkk, bkkDate, fmtDay, fmtTime } from "@/lib/mock/time";
 import type { Shift } from "@/lib/mock/types";
 
-type Msg = { tone: "lime" | "rose"; text: string } | null;
+type Msg = { tone: "accent" | "rose"; text: string } | null;
 
 export default function SchedulePage() {
   const [tab, setTab] = useState<"shifts" | "appointments">("shifts");
@@ -53,7 +53,7 @@ function Shifts({ dept }: { dept: string }) {
     if (endTime <= startTime) return setMsg({ tone: "rose", text: "เวลาสิ้นสุดต้องหลังเวลาเริ่มต้น" });
     if (shiftOverlaps(state, form.doctorId, startTime, endTime)) return setMsg({ tone: "rose", text: "เวรนี้ซ้อนกับเวรเดิมของแพทย์ท่านนี้" });
     update((s) => addShift(s, { doctorId: form.doctorId, date: form.date, startTime, endTime }));
-    setMsg({ tone: "lime", text: "เพิ่มเวรแล้ว มีผลกับการจ่ายคิวครั้งถัดไป" });
+    setMsg({ tone: "accent", text: "เพิ่มเวรแล้ว มีผลกับการจ่ายคิวครั้งถัดไป" });
   }
 
   function cancel(sh: Shift) {
@@ -81,7 +81,7 @@ function Shifts({ dept }: { dept: string }) {
             </thead>
             <tbody>
               {doctors.map((doc) => (
-                <tr key={doc.id} className="border-t border-subtle">
+                <tr key={doc.id} className="border-t border-line/70 transition hover:bg-subtle/60">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar text={doctorInitials(doc.name, deptMap.get(doc.departmentId)?.code)} />
@@ -104,7 +104,7 @@ function Shifts({ dept }: { dept: string }) {
                             return (
                               <span
                                 key={sh.id}
-                                className={`group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs tabular-nums ${!live ? "bg-subtle text-ink-3 line-through" : running ? "bg-lime text-lime-ink" : "bg-subtle text-ink"}`}
+                                className={`group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs tabular-nums ${!live ? "bg-subtle text-ink-3 line-through" : running ? "bg-accent text-accent-ink" : "bg-subtle text-ink"}`}
                               >
                                 {fmtTime(sh.startTime)}–{fmtTime(sh.endTime)}
                                 {isAdmin && live && sh.endTime > nowIso && (
@@ -125,8 +125,8 @@ function Shifts({ dept }: { dept: string }) {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap gap-4 border-t border-subtle px-6 py-4 text-xs text-ink-3">
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-lime" /> กำลังปฏิบัติงาน</span>
+        <div className="flex flex-wrap gap-4 border-t border-line/70 px-6 py-4 text-xs text-ink-3">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-accent" /> กำลังปฏิบัติงาน</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-subtle ring-1 ring-line" /> เวรปกติ</span>
           <span className="line-through">ถูกยกเลิก</span>
         </div>
@@ -184,7 +184,7 @@ function Appointments({ dept }: { dept: string }) {
     const inShift = state.shifts.some((s) => s.doctorId === form.doctorId && s.status === "ACTIVE" && s.startTime <= t && t < s.endTime);
     if (!inShift) return setMsg({ tone: "rose", text: "เวลานัดไม่อยู่ในเวรของแพทย์ท่านนี้" });
     update((s, n) => addAppointment(s, n, { patientId: form.patientId, doctorId: form.doctorId, appointmentTime: t, reason: form.reason.trim(), createdBy: s.sessionUserId! }));
-    setMsg({ tone: "lime", text: "บันทึกนัดหมายแล้ว และแจ้งผู้ป่วยผ่าน LINE" });
+    setMsg({ tone: "accent", text: "บันทึกนัดหมายแล้ว และแจ้งผู้ป่วยผ่าน LINE" });
     set({ reason: "" });
   }
 
@@ -192,7 +192,7 @@ function Appointments({ dept }: { dept: string }) {
     const r = checkInAppointment(state, now, id);
     if (r.error) return setMsg({ tone: "rose", text: r.error });
     update(() => r.state);
-    setMsg({ tone: "lime", text: "ยืนยันการมาถึงแล้ว ผู้ป่วยเข้าคิวของแพทย์ที่นัดไว้" });
+    setMsg({ tone: "accent", text: "ยืนยันการมาถึงแล้ว ผู้ป่วยเข้าคิวของแพทย์ที่นัดไว้" });
   }
 
   return (
@@ -212,7 +212,7 @@ function Appointments({ dept }: { dept: string }) {
             const late = a.status === "SCHEDULED" && new Date(a.appointmentTime).getTime() < now;
             const st = APPOINTMENT_STATUS[a.status];
             return (
-              <li key={a.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-subtle px-4 py-3">
+              <li key={a.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-subtle px-4 py-3 transition hover:bg-subtle-2">
                 <div className="w-14 text-center">
                   <div className="text-lg font-semibold tabular-nums">{fmtTime(a.appointmentTime)}</div>
                   <div className="text-[10px] text-ink-3">น.</div>
@@ -224,7 +224,7 @@ function Appointments({ dept }: { dept: string }) {
                 <span className={`rounded-full px-2.5 py-1 text-xs ${late ? "bg-amber-50 text-amber-800" : st.cls}`}>{late ? "เลยเวลานัด" : st.label}</span>
                 {a.status === "SCHEDULED" && (
                   <div className="flex gap-1.5">
-                    {day === today && <button onClick={() => checkIn(a.id)} className={`${btn.small} bg-ink text-white hover:bg-black`}>ยืนยันมาถึง</button>}
+                    {day === today && <button onClick={() => checkIn(a.id)} className={btn.primarySmall}>ยืนยันมาถึง</button>}
                     {late && <button onClick={() => update((s) => setAppointmentStatus(s, a.id, "MISSED"))} className={`${btn.small} bg-surface text-ink-2 ring-1 ring-line`}>ไม่มาตามนัด</button>}
                     <button onClick={() => window.confirm("ยกเลิกนัดหมายนี้?") && update((s) => setAppointmentStatus(s, a.id, "CANCELLED"))} className={`${btn.small} bg-surface text-rose-700 ring-1 ring-rose-200`}>ยกเลิก</button>
                   </div>

@@ -36,7 +36,7 @@ export default function DoctorPage() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <PageHeader title="คิวของฉัน" subtitle={`${doctor.name} · ${dept.get(doctor.departmentId)?.name ?? "-"}`}>
-        <span className={`rounded-full px-4 py-2 text-sm ${shift ? "bg-lime text-lime-ink" : "bg-surface text-ink-3 ring-1 ring-line"}`}>
+        <span className={`rounded-full px-4 py-2 text-sm ${shift ? "bg-accent text-accent-ink" : "bg-surface text-ink-3 ring-1 ring-line"}`}>
           {shift ? `อยู่ในเวร ${fmtTime(shift.startTime)}–${fmtTime(shift.endTime)} น.` : "ไม่อยู่ในเวรขณะนี้"}
         </span>
       </PageHeader>
@@ -61,7 +61,7 @@ export default function DoctorPage() {
                     <Link href={`/staff/queues/${q.id}`} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition hover:bg-subtle">
                       <span className="font-mono font-semibold">{q.queueNumber}</span>
                       <span className="flex-1 truncate text-ink-2">{state.patients.find((p) => p.id === q.patientId)?.fullName}</span>
-                      {rx ? <Tag tone="lime">สั่งยา</Tag> : <Tag>ไม่สั่งยา</Tag>}
+                      {rx ? <Tag tone="accent">สั่งยา</Tag> : <Tag>ไม่สั่งยา</Tag>}
                       <span className="w-14 text-right text-xs tabular-nums text-ink-3">{fmtTime(q.finishedTime!)} น.</span>
                     </Link>
                   </li>
@@ -109,7 +109,7 @@ function CurrentCard({ q }: { q: Queue }) {
 
   return (
     <div>
-      <div className={`flex flex-wrap items-center justify-between gap-4 rounded-[22px] px-5 py-4 ${called ? "bg-lime" : "bg-subtle"}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-4 rounded-[22px] px-5 py-4 ${called ? "bg-accent" : "bg-subtle"}`}>
         <div>
           <div className="font-mono text-4xl font-semibold tracking-tight">{q.queueNumber}</div>
           <div className="mt-1 text-sm">{patient?.fullName}</div>
@@ -147,7 +147,7 @@ function CurrentCard({ q }: { q: Queue }) {
           <CalledActions q={q} />
         ) : (
           <>
-            <Link href={`/staff/queues/${q.id}`} className={btn.accent}>บันทึกผลการตรวจ</Link>
+            <Link href={`/staff/queues/${q.id}`} className={btn.primary}>บันทึกผลการตรวจ</Link>
             {online && meetingUrl && (
               <a href={meetingUrl} target="_blank" rel="noopener noreferrer" className={btn.secondary}>
                 <Video size={16} strokeWidth={1.8} /> เปิดห้องวิดีโอคอล

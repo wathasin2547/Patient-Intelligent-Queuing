@@ -104,14 +104,14 @@ function MainCard({ q }: { q: Queue }) {
 
   return (
     <>
-      <div className={`rounded-card p-6 ${called ? "bg-lime text-lime-ink" : done ? "bg-surface" : "bg-ink text-white"}`}>
-        <div className={`text-sm ${called ? "text-lime-ink/70" : done ? "text-ink-3" : "text-white/60"}`}>
+      <div className={`rounded-card p-6 ${called ? "bg-accent text-accent-ink" : done ? "bg-surface" : "bg-ink text-white"}`}>
+        <div className={`text-sm ${called ? "text-accent-ink/70" : done ? "text-ink-3" : "text-white/60"}`}>
           หมายเลขคิวของคุณ · {dept.get(q.departmentId)?.name}
         </div>
-        <div className={`mt-2 font-mono text-6xl font-semibold tracking-tight ${q.status === "CANCELLED" ? "text-ink-3 line-through" : !called && !done ? "text-lime" : ""}`}>{q.queueNumber}</div>
+        <div className={`mt-2 font-mono text-6xl font-semibold tracking-tight ${q.status === "CANCELLED" ? "text-ink-3 line-through" : !called && !done ? "text-accent" : ""}`}>{q.queueNumber}</div>
         <div className="mt-4 text-lg font-medium">{online && called ? "ถึงคิวแล้ว เชิญเข้าห้องตรวจออนไลน์" : STATUS_TEXT[q.status]}</div>
         {online && called && meetingUrl && (
-          <a href={meetingUrl} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 rounded-full bg-ink py-3.5 font-medium text-lime">
+          <a href={meetingUrl} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 rounded-full bg-ink py-3.5 font-medium text-accent">
             <Video size={18} strokeWidth={1.8} /> เข้าห้องตรวจออนไลน์
           </a>
         )}

@@ -77,7 +77,7 @@ export function PrescriptionForm({ q }: { q: Queue }) {
         <div className="mb-4 rounded-2xl bg-subtle p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-ink-3">ยาครั้งล่าสุด · {fmtShortDate(lastRx.issuedAt)} · {lastRx.daysSupply} วัน</span>
-            <button onClick={repeatLast} className={`${btn.small} bg-ink text-white hover:bg-black`}>
+            <button onClick={repeatLast} className={`${btn.small} bg-ink text-white hover:bg-primary-strong`}>
               <History size={13} strokeWidth={1.8} /> ใช้ยาชุดเดิม
             </button>
           </div>
@@ -95,7 +95,7 @@ export function PrescriptionForm({ q }: { q: Queue }) {
           className="input pl-10"
         />
         {query.trim() && (
-          <ul className="absolute inset-x-0 top-full z-10 mt-1.5 overflow-hidden rounded-2xl bg-surface py-1 shadow-[0_12px_32px_-12px_rgba(21,22,19,0.35)] ring-1 ring-line">
+          <ul className="absolute inset-x-0 top-full z-10 mt-1.5 overflow-hidden rounded-2xl bg-surface py-1 shadow-[0_12px_32px_-12px_rgba(3,4,94,0.35)] ring-1 ring-line">
             {matches.map((d) => (
               <li key={d.name}>
                 <button onClick={() => add(toLine(d, days))} className="flex w-full flex-col px-4 py-2 text-left hover:bg-subtle">
@@ -165,7 +165,7 @@ export function PrescriptionForm({ q }: { q: Queue }) {
         </div>
       )}
 
-      <button onClick={save} className={`${lines.length ? btn.accent : btn.primary} mt-5 w-full`}>
+      <button onClick={save} className={`${btn.primary} mt-5 w-full`}>
         {lines.length ? `บันทึกผลและสั่งยา ${lines.length} รายการ` : "บันทึกผล · ไม่สั่งยา"}
       </button>
       <p className="mt-3 text-xs text-ink-3">ถ้ามีการสั่งยา ระบบส่งข้อความให้ผู้ป่วยเลือกวิธีรับยา และสร้างรอบเตือนรับยาให้ผู้ป่วยโรคเรื้อรัง</p>

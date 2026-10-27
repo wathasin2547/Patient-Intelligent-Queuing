@@ -30,10 +30,10 @@ export default function ChatInfoPage() {
   }
   return (
     <div className="flex flex-1 flex-col gap-3 p-4">
-      <div className="rounded-card bg-lime p-6 text-lime-ink">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-lime"><MessageCircle size={22} strokeWidth={1.8} /></span>
+      <div className="rounded-card bg-accent p-6 text-accent-ink">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-accent"><MessageCircle size={22} strokeWidth={1.8} /></span>
         <h1 className="mt-5 text-2xl font-medium tracking-tight">รับคิวผ่านแชท</h1>
-        <p className="mt-1 text-sm text-lime-ink/70">ใช้เวลาประมาณ 1–2 นาที</p>
+        <p className="mt-1 text-sm text-accent-ink/70">ใช้เวลาประมาณ 1–2 นาที</p>
       </div>
       <ol className="flex flex-col gap-2">
         {STEPS.map((s, i) => (

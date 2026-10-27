@@ -48,7 +48,7 @@ export default function MasterPage() {
 
 const LAYOUT = "grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]";
 const TH = "pb-3 text-left text-xs font-normal text-ink-3";
-const TR = "border-t border-subtle";
+const TR = "border-t border-line/70 transition hover:bg-subtle/60";
 
 function ActiveToggle({ active, onChange }: { active: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -64,7 +64,7 @@ function ActiveToggle({ active, onChange }: { active: boolean; onChange: (v: boo
 function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
   return (
     <label className="flex cursor-pointer items-start gap-2.5 rounded-2xl bg-subtle px-4 py-3 text-sm">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#151613]" />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-ink" />
       <span>{children}</span>
     </label>
   );
@@ -184,7 +184,7 @@ function Doctors() {
       <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย · ลิงก์ห้องตรวจออนไลน์ส่งให้ผู้ป่วยตรวจออนไลน์เมื่อถึงคิว">
         <ul className="flex flex-col gap-2">
           {state.doctors.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5">
+            <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2">
               <Avatar text={doctorInitials(d.name, dept.get(d.departmentId)?.code)} dark />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{d.name}</div>
@@ -389,7 +389,7 @@ function Questions() {
       <Card title="ชุดคำถามซักประวัติ" icon={ListChecks} note="แชทบอทถามตามลำดับ และข้ามข้อที่เงื่อนไขไม่ตรง">
         <ol className="flex flex-col gap-2">
           {list.map((q) => (
-            <li key={q.id} className={`flex gap-4 rounded-2xl px-4 py-3.5 ${editing?.id === q.id ? "bg-lime/50" : "bg-subtle"} ${q.isActive ? "" : "opacity-40"}`}>
+            <li key={q.id} className={`flex gap-4 rounded-2xl px-4 py-3.5 ${editing?.id === q.id ? "bg-accent/50" : "bg-subtle"} ${q.isActive ? "" : "opacity-40"}`}>
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums">{q.order}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -487,7 +487,7 @@ function Users() {
       <Card title="บัญชีบุคลากร" icon={KeyRound} note="บุคลากรสมัครเองไม่ได้ · บัญชีที่ปิดใช้งานจะเข้าสู่ระบบไม่ได้">
         <ul className="flex flex-col gap-2">
           {state.users.map((u) => (
-            <li key={u.id} className={`flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 ${u.isActive ? "" : "opacity-50"}`}>
+            <li key={u.id} className={`flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2 ${u.isActive ? "" : "opacity-50"}`}>
               <Avatar text={u.username.slice(0, 2).toUpperCase()} dark={u.role === "ADMIN"} />
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm">{u.username}</div>
@@ -495,7 +495,7 @@ function Users() {
                   {ROLE_LABEL[u.role]} · {u.doctorId ? doctorMap.get(u.doctorId)?.name : u.departmentId ? dept.get(u.departmentId)?.name : "ทุกแผนก"}
                 </div>
               </div>
-              {u.id === state.sessionUserId ? <Tag tone="lime">บัญชีของคุณ</Tag> : <ActiveToggle active={u.isActive} onChange={(v) => update((s) => saveUser(s, { ...u, isActive: v }))} />}
+              {u.id === state.sessionUserId ? <Tag tone="accent">บัญชีของคุณ</Tag> : <ActiveToggle active={u.isActive} onChange={(v) => update((s) => saveUser(s, { ...u, isActive: v }))} />}
             </li>
           ))}
         </ul>

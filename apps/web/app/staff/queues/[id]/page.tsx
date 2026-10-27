@@ -72,7 +72,7 @@ function QueueDetail({ q }: { q: Queue }) {
               <LevelChip level={q.priorityLevel} />
               <StatusChip status={q.status} />
               {q.visitType === "ONLINE" && <Tag tone="sky">ตรวจออนไลน์</Tag>}
-              {q.appointmentId && <Tag tone="lime">มาตามนัดหมาย</Tag>}
+              {q.appointmentId && <Tag tone="accent">มาตามนัดหมาย</Tag>}
             </div>
           </div>
           <dl className="grid flex-1 grid-cols-2 gap-2 sm:max-w-[560px] sm:grid-cols-3">
@@ -111,7 +111,7 @@ function QueueDetail({ q }: { q: Queue }) {
                   <div className="text-xs text-ink-3">ข้อความที่ผู้ป่วยพิมพ์ (ต้นฉบับ)</div>
                   <p className="mt-1 text-[15px] leading-relaxed">{screening.freeTextInput ? `“${screening.freeTextInput}”` : <span className="text-ink-3">— ไม่ได้พิมพ์ —</span>}</p>
                 </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-subtle pt-4 text-sm">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line/70 pt-4 text-sm">
                   <span className="flex items-center gap-1.5 text-xs text-ink-3"><Sparkles size={14} strokeWidth={1.8} /> รหัสอาการจาก LLM</span>
                   {screening.llmStatus === "ok" && (screening.llmCodes.length ? screening.llmCodes.map((c) => <code key={c} className="rounded-full bg-subtle px-2.5 py-0.5 text-xs">{c}</code>) : <span className="text-xs text-ink-3">ไม่พบรหัสที่ตรงกับบัญชี</span>)}
                   {screening.llmStatus === "skipped" && <span className="text-xs text-ink-3">ไม่ได้เรียก (ไม่มีข้อความ)</span>}
@@ -172,7 +172,7 @@ function OtherQueuesCard({ q }: { q: Queue }) {
               {isDoctor ? (
                 <div className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm">{row}</div>
               ) : (
-                <Link href={`/staff/queues/${x.id}`} className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm hover:bg-[#ecede8]">{row}</Link>
+                <Link href={`/staff/queues/${x.id}`} className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm hover:bg-subtle-2">{row}</Link>
               )}
             </li>
           );
@@ -211,7 +211,7 @@ function ReferCard({ q }: { q: Queue }) {
         </select>
       </div>
       <button onClick={refer} disabled={!dept} className={`${btn.secondary} mt-3 w-full`}>ส่งต่อและออกคิว</button>
-      {result && <div className="mt-3"><Notice tone={result.ok ? "lime" : "amber"}>{result.text}</Notice></div>}
+      {result && <div className="mt-3"><Notice tone={result.ok ? "accent" : "amber"}>{result.text}</Notice></div>}
       <p className="mt-3 text-xs text-ink-3">คิวใหม่เริ่มนับเวลารอตั้งแต่ตอนส่งต่อ จึงไม่แซงผู้ป่วยที่รอแผนกนั้นอยู่ก่อน</p>
     </Card>
   );
@@ -246,7 +246,7 @@ function ScreeningResult({ q }: { q: Queue }) {
       </div>
       {(changedDept || changedLevel) && (
         <div className="mt-2">
-          <Notice tone="lime">
+          <Notice tone="accent">
             เจ้าหน้าที่ปรับเป็น {changedDept && <b>{dept.get(q.departmentId)?.name}</b>}
             {changedDept && changedLevel && " · "}
             {changedLevel && <b>ระดับ{LEVEL[q.priorityLevel].name}</b>}
@@ -274,7 +274,7 @@ function ScreeningResult({ q }: { q: Queue }) {
           <div className="mt-6 text-xs text-ink-3">เหตุผล · รหัสอาการที่ให้คะแนนแผนก{dept.get(algoDept ?? "")?.name}</div>
           <ul className="mt-2 flex flex-col">
             {s.reason.map((r) => (
-              <li key={r.code} className="flex items-center gap-3 border-t border-subtle py-2.5 text-sm first:border-0">
+              <li key={r.code} className="flex items-center gap-3 border-t border-line/70 py-2.5 text-sm first:border-0">
                 <span className="flex-1">{code.get(r.code)?.label ?? r.code}</span>
                 <code className="text-xs text-ink-3">{r.code}</code>
                 <span className="w-10 text-right font-medium tabular-nums">+{r.weight}</span>
@@ -348,7 +348,7 @@ function ResultCard({ q }: { q: Queue }) {
   if (q.status === "DONE") {
     return (
       <Card title="ผลการตรวจ" icon={Pill} note="UC09">
-        <Notice tone="lime">บันทึกผลการตรวจแล้ว{q.finishedTime ? ` เมื่อ ${fmtTime(q.finishedTime)} น.` : ""}</Notice>
+        <Notice tone="accent">บันทึกผลการตรวจแล้ว{q.finishedTime ? ` เมื่อ ${fmtTime(q.finishedTime)} น.` : ""}</Notice>
         {!rx && <p className="mt-3 text-sm text-ink-3">ไม่มีการสั่งจ่ายยา</p>}
         {rx && (
           <>
@@ -361,7 +361,7 @@ function ResultCard({ q }: { q: Queue }) {
               ))}
             </ul>
             <p className="mt-2 text-xs text-ink-3">จ่ายยาสำหรับ {rx.daysSupply} วัน{refill ? ` · เตือนรับยารอบถัดไป ${refill.dueDate}` : ""}</p>
-            <div className="mt-4 border-t border-subtle pt-4 text-sm">
+            <div className="mt-4 border-t border-line/70 pt-4 text-sm">
               {!delivery && <span className="text-ink-3">รอผู้ป่วยเลือกวิธีรับยาผ่าน LINE (UC06)</span>}
               {delivery && isDoctor && (
                 <div className="text-ink-2">

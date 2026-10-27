@@ -19,7 +19,7 @@ function QueueTags({ q }: { q: Queue }) {
       {heldElsewhere && <Tag tone="amber">ติดตรวจแผนกอื่น · เก็บลำดับไว้</Tag>}
       {!heldElsewhere && others.length > 0 && <Tag>มีอีก {others.length} คิว</Tag>}
       {q.referredFromQueueId && <Tag>ส่งต่อ</Tag>}
-      {q.appointmentId && <Tag tone="lime">นัดหมาย</Tag>}
+      {q.appointmentId && <Tag tone="accent">นัดหมาย</Tag>}
       {q.visitType === "ONLINE" && <Tag tone="sky">ออนไลน์</Tag>}
       {q.editedBy && <Tag>แก้ไขแล้ว</Tag>}
       {screening?.llmStatus === "failed" && <Tag tone="amber">LLM ล้มเหลว</Tag>}
@@ -54,7 +54,7 @@ export function QueueRow({ q, rank }: { q: Queue; rank: number }) {
 /** The patient with the doctor now (called or in the exam room). */
 export function CurrentPatient({ q }: { q: Queue }) {
   return (
-    <Link href={`/staff/queues/${q.id}`} className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition ${q.status === "CALLED" ? "bg-lime/70 hover:bg-lime" : "bg-subtle hover:bg-[#ecede8]"}`}>
+    <Link href={`/staff/queues/${q.id}`} className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition ${q.status === "CALLED" ? "bg-accent/70 hover:bg-accent" : "bg-subtle hover:bg-subtle-2"}`}>
       <div className="min-w-0">
         <div className="font-mono text-2xl font-semibold tracking-tight">{q.queueNumber}</div>
         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-2">
@@ -90,7 +90,7 @@ export function CalledActions({ q, small }: { q: Queue; small?: boolean }) {
     <div className="flex flex-col gap-2">
       {online && !doctor?.meetingUrl && <Notice tone="amber">แพทย์ยังไม่ได้ตั้งลิงก์ห้องตรวจออนไลน์ (ตั้งได้ที่ ข้อมูลพื้นฐาน → แพทย์)</Notice>}
       <div className="flex flex-wrap items-center gap-2">
-        <button onClick={start} className={small ? `${btn.small} bg-ink text-white hover:bg-black` : btn.primary}>
+        <button onClick={start} className={small ? btn.primarySmall : btn.primary}>
           {online && <Video size={small ? 13 : 16} strokeWidth={1.8} />}
           {online ? (isDoctor ? "เริ่มวิดีโอคอล" : "เริ่มตรวจออนไลน์") : "ผู้ป่วยเข้าห้องตรวจ"}
         </button>

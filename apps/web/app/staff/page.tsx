@@ -86,7 +86,7 @@ export default function Dashboard() {
           {/* overview */}
           <Card title="วันนี้" note={dept === "ALL" ? "ทุกแผนก" : deptMap.get(dept)?.name}>
             <div className="grid gap-2 rounded-[22px] bg-subtle p-2 sm:grid-cols-2">
-              <div className="rounded-[18px] bg-surface p-5 shadow-[0_1px_2px_rgba(21,22,19,0.05),0_10px_24px_-16px_rgba(21,22,19,0.2)]">
+              <div className="rounded-[18px] bg-surface p-5 shadow-[0_1px_2px_rgba(3,4,94,0.05),0_10px_24px_-16px_rgba(3,4,94,0.2)]">
                 <div className="flex items-center gap-2 text-sm text-ink-2"><Users size={16} strokeWidth={1.8} /> รอเรียกตอนนี้</div>
                 <div className="mt-3 flex items-end gap-3">
                   <span className="text-[52px] font-light leading-none tracking-tight tabular-nums">{waiting.length}</span>
@@ -131,7 +131,7 @@ export default function Dashboard() {
           </Card>
 
           {/* arrivals per hour */}
-          <Card title="ผู้ป่วยรับคิวรายชั่วโมง" icon={BarChart3} note="วันนี้ · แท่งสีเขียวคือชั่วโมงปัจจุบัน กรอบเส้นประคือชั่วโมงที่ยังมาไม่ถึง">
+          <Card title="ผู้ป่วยรับคิวรายชั่วโมง" icon={BarChart3} note="วันนี้ · แท่งสีน้ำเงินเข้มคือชั่วโมงปัจจุบัน กรอบเส้นประคือชั่วโมงที่ยังมาไม่ถึง">
             <div className="grid items-end gap-6 sm:grid-cols-[150px_minmax(0,1fr)]">
               <div>
                 <div className="text-[44px] font-light leading-none tracking-tight tabular-nums">{todays.length}</div>
@@ -197,7 +197,7 @@ export default function Dashboard() {
                 const q = state.queues.find((x) => x.id === e.queueId);
                 return (
                   <li key={e.id} className="flex gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lime text-lime-ink"><Megaphone size={16} strokeWidth={1.8} /></span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink"><Megaphone size={16} strokeWidth={1.8} /></span>
                     <div className="min-w-0 text-sm">
                       <div><span className="font-mono font-semibold">{q?.queueNumber}</span> <span className="text-ink-3">เข้าห้องตรวจ</span></div>
                       <div className="truncate text-xs text-ink-3">{doctorMap.get(e.doctorId)?.name} · {fmtTime(e.at)} น.</div>

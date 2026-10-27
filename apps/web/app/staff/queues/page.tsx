@@ -17,7 +17,7 @@ import { bkkDate, fmtTime } from "@/lib/mock/time";
 import type { CallEvent, QueueStatus } from "@/lib/mock/types";
 
 const EVENT: Record<CallEvent["kind"], { label: string; icon: LucideIcon; cls: string }> = {
-  CALL: { label: "เรียก", icon: Megaphone, cls: "bg-lime text-lime-ink" },
+  CALL: { label: "เรียก", icon: Megaphone, cls: "bg-accent text-accent-ink" },
   NO_SHOW: { label: "บันทึกไม่มา", icon: UserX, cls: "bg-rose-50 text-rose-700" },
   HOLD: { label: "ข้ามชั่วคราว (ติดตรวจแผนกอื่น)", icon: Hourglass, cls: "bg-amber-50 text-amber-800" },
 };
@@ -70,24 +70,25 @@ function QueuesBoard() {
         <Segmented value={dept} onChange={setDept} options={[{ value: "ALL", label: "ทุกแผนก" }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
       </div>
 
-      <section className="mb-5 rounded-card bg-lime p-5 sm:p-6">
+      {/* test tool, not part of the real workflow: neutral card with a dashed edge so it reads as "dev" */}
+      <section className="mb-5 rounded-card border-2 border-dashed border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lime"><Zap size={18} strokeWidth={1.8} /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-accent"><Zap size={18} strokeWidth={1.8} /></span>
             <div>
-              <h2 className="text-[17px] font-semibold tracking-tight text-lime-ink">จำลองผู้ป่วยรับคิวจาก LINE</h2>
-              <p className="text-xs text-lime-ink/70">ทดสอบ UC04 → UC10 · ในระบบจริงผลคัดกรองมาจาก Python service</p>
+              <h2 className="text-[17px] font-semibold tracking-tight text-ink">จำลองผู้ป่วยรับคิวจาก LINE</h2>
+              <p className="text-xs text-ink-3">ทดสอบ UC04 → UC10 · ในระบบจริงผลคัดกรองมาจาก Python service</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((p, i) => (
-              <button key={p.label} onClick={() => simulate(i)} className="rounded-full bg-surface/80 px-3.5 py-2 text-sm text-ink transition hover:bg-surface">
+              <button key={p.label} onClick={() => simulate(i)} className="min-h-9 rounded-full bg-subtle px-3.5 py-2 text-sm text-ink ring-1 ring-line transition hover:bg-subtle-2 hover:ring-ink/40">
                 + {p.label}
               </button>
             ))}
           </div>
         </div>
-        {simMsg && <div className="mt-4 rounded-2xl bg-surface/80 px-4 py-3 text-sm">{simMsg}</div>}
+        {simMsg && <div className="mt-4"><Notice tone="sky">{simMsg}</Notice></div>}
       </section>
 
       {unassigned.length > 0 && (
@@ -176,13 +177,13 @@ function QueuesBoard() {
               </thead>
               <tbody>
                 {(showAll ? todays : todays.slice(0, ROWS)).map((q) => (
-                  <tr key={q.id} className="border-t border-subtle transition hover:bg-subtle/70">
+                  <tr key={q.id} className="border-t border-line/70 transition hover:bg-subtle/70">
                     <td className="px-5 py-3 sm:px-6">
                       <Link href={`/staff/queues/${q.id}`} className="font-mono font-semibold hover:underline">{q.queueNumber}</Link>
                     </td>
                     <td className="px-2 py-3">
                       <span className="mr-1.5">{patientMap.get(q.patientId)?.fullName}</span>
-                      {q.appointmentId && <Tag tone="lime">นัดหมาย</Tag>}
+                      {q.appointmentId && <Tag tone="accent">นัดหมาย</Tag>}
                     </td>
                     <td className="px-2 py-3 text-ink-2">{q.doctorId ? doctorMap.get(q.doctorId)?.name : <span className="text-amber-700">ยังไม่มีแพทย์</span>}</td>
                     <td className="px-2 py-3"><LevelChip level={q.priorityLevel} short /></td>

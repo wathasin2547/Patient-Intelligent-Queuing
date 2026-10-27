@@ -24,7 +24,7 @@ export default function Home() {
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lime"><Activity size={19} strokeWidth={2.2} /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-accent"><Activity size={19} strokeWidth={2.2} /></span>
           <span className="font-semibold">PIQ</span>
         </div>
         <MockBadge />
@@ -32,7 +32,7 @@ export default function Home() {
 
       <h1 className="mt-12 max-w-3xl text-[40px] font-medium leading-[1.12] tracking-tight sm:text-[56px]">
         ระบบจัดการคิว
-        <span className="mx-3 inline-flex h-11 w-20 translate-y-1 items-center justify-center rounded-full bg-lime align-baseline sm:h-14 sm:w-24"><ListOrdered size={24} strokeWidth={2} /></span>
+        <span className="mx-3 inline-flex h-11 w-20 translate-y-1 items-center justify-center rounded-full bg-accent align-baseline sm:h-14 sm:w-24"><ListOrdered size={24} strokeWidth={2} /></span>
         ผู้ป่วยอัจฉริยะ
       </h1>
       <p className="mt-4 max-w-xl text-ink-2">
@@ -43,15 +43,15 @@ export default function Home() {
         <Group title="บุคลากรทางการแพทย์" sub="เว็บแอปพลิเคชัน" items={STAFF} />
         <div className="flex flex-col gap-5">
           <Group title="ผู้ป่วย" sub="LINE OA / LIFF" items={PATIENT} />
-          <Link href="/display" className="group flex items-center justify-between rounded-card bg-ink p-6 text-white transition hover:bg-black">
+          <Link href="/display" className="group flex items-center justify-between rounded-card bg-brand p-6 text-white transition hover:bg-primary-strong">
             <div className="flex items-center gap-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-lime text-ink"><MonitorPlay size={19} strokeWidth={1.8} /></span>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-ink"><MonitorPlay size={19} strokeWidth={1.8} /></span>
               <div>
                 <div className="font-medium">จอเรียกคิวหน้าห้องตรวจ</div>
                 <div className="text-xs text-white/50">UC13 · ระบบเรียกคิวเอง</div>
               </div>
             </div>
-            <ArrowUpRight size={20} strokeWidth={1.8} className="text-white/50 transition group-hover:text-lime" />
+            <ArrowUpRight size={20} strokeWidth={1.8} className="text-white/50 transition group-hover:text-accent" />
           </Link>
         </div>
       </div>
@@ -74,7 +74,7 @@ function Group({ title, sub, items }: { title: string; sub: string; items: Item[
               <div className="font-medium">{i.title}</div>
               <div className="text-xs text-ink-3 group-hover:text-white/50">{i.uc}</div>
             </div>
-            <ArrowUpRight size={18} strokeWidth={1.8} className="text-ink-3 group-hover:text-lime" />
+            <ArrowUpRight size={18} strokeWidth={1.8} className="text-ink-3 group-hover:text-accent" />
           </Link>
         ))}
       </div>

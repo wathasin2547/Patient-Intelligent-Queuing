@@ -41,7 +41,7 @@ export default function LiffLayout({ children }: { children: React.ReactNode }) 
         <MockBadge />
       </div>
 
-      <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-ink sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(21,22,19,0.45)]">
+      <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-brand sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(3,4,94,0.45)]">
         <div className="flex min-h-[760px] flex-1 flex-col overflow-hidden bg-canvas sm:rounded-[36px]">
           <div className="flex items-center gap-2 bg-surface px-4 py-3.5">
             {pathname !== "/liff" ? (

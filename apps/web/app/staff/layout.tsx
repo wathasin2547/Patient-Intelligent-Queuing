@@ -52,27 +52,30 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col px-5 py-7 lg:flex">
-        <Link href={home} className="flex items-center gap-3 px-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-lime">
+      {/* Navy sidebar: white text 17.7:1, inactive items white/75 (9.9:1). */}
+      <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col bg-brand px-4 py-7 text-white lg:flex">
+        <Link href={home} className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-ink">
             <Activity size={19} strokeWidth={2.2} />
           </span>
           <span>
             <span className="block text-[15px] font-semibold leading-tight">PIQ</span>
-            <span className="block text-xs text-ink-3">ระบบจัดการคิวผู้ป่วย</span>
+            <span className="block text-xs text-white/70">ระบบจัดการคิวผู้ป่วย</span>
           </span>
         </Link>
+        <div className="ocean-band mx-2 mt-6 h-1 rounded-full" aria-hidden />
 
-        <nav className="mt-10 flex flex-col gap-1">
+        <nav className="mt-6 flex flex-col gap-1" aria-label="เมนูหลัก">
           {nav.map((n) => {
             const on = active(n.href);
             return (
               <Link
                 key={n.href}
                 href={n.href}
-                className={`flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm transition ${on ? "bg-surface font-medium text-ink shadow-[0_1px_2px_rgba(21,22,19,0.05),0_8px_20px_-12px_rgba(21,22,19,0.18)]" : "text-ink-2 hover:bg-surface/60 hover:text-ink"}`}
+                aria-current={on ? "page" : undefined}
+                className={`relative flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition ${on ? "bg-white/12 font-medium text-white before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-cta" : "text-white/75 hover:bg-white/8 hover:text-white"}`}
               >
-                <n.icon size={18} strokeWidth={1.8} />
+                <n.icon size={18} strokeWidth={1.8} className={on ? "text-cta" : ""} />
                 <span className="flex-1">{n.label}</span>
                 {n.href === "/staff" && redFlags > 0 && <span className="rounded-full bg-red-500 px-1.5 text-[11px] font-medium text-white">{redFlags}</span>}
               </Link>
@@ -80,22 +83,22 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="mt-8 px-3.5 text-[11px] font-medium uppercase tracking-wider text-ink-3">ระบบ</div>
-        <Link href="/display" target="_blank" className="mt-2 flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm text-ink-2 hover:bg-surface/60 hover:text-ink">
+        <div className="mt-8 px-3.5 text-[11px] font-medium uppercase tracking-wider text-white/60">ระบบ</div>
+        <Link href="/display" target="_blank" className="mt-2 flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm text-white/75 hover:bg-white/8 hover:text-white">
           <ArrowUpRight size={18} strokeWidth={1.8} />
           จอเรียกคิว
         </Link>
 
-        <div className="mt-auto flex items-center gap-3 rounded-3xl bg-surface p-3 shadow-[0_1px_2px_rgba(21,22,19,0.04)]">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-xs font-semibold uppercase text-white">
+        <div className="mt-auto flex items-center gap-3 rounded-2xl bg-white/6 p-3 ring-1 ring-white/10">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-xs font-semibold uppercase text-ink">
             {user.username.slice(0, 2)}
           </span>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{user.username}</div>
-            <div className="truncate text-xs text-ink-3">{ROLE_LABEL[user.role]}{deptName ? ` · ${deptName}` : ""}</div>
-            {doctorName && <div className="truncate text-xs text-ink-3">{doctorName}</div>}
+            <div className="truncate text-xs text-white/70">{ROLE_LABEL[user.role]}{deptName ? ` · ${deptName}` : ""}</div>
+            {doctorName && <div className="truncate text-xs text-white/70">{doctorName}</div>}
           </div>
-          <button onClick={logout} title="ออกจากระบบ" className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 hover:bg-subtle hover:text-ink">
+          <button onClick={logout} title="ออกจากระบบ" aria-label="ออกจากระบบ" className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white">
             <LogOut size={17} strokeWidth={1.8} />
           </button>
         </div>
@@ -104,7 +107,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-5 sm:px-8 lg:pt-7">
           <Link href={home} className="flex items-center gap-2 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-lime"><Activity size={17} strokeWidth={2.2} /></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-accent"><Activity size={17} strokeWidth={2.2} /></span>
             <span className="font-semibold">PIQ</span>
           </Link>
           <div className="hidden text-sm text-ink-3 lg:block">{fmtDate(now)}</div>
@@ -132,7 +135,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           </div>
           <nav className="-mx-1 flex w-full gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] lg:hidden">
             {nav.map((n) => (
-              <Link key={n.href} href={n.href} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs ${active(n.href) ? "bg-ink text-white" : "bg-surface text-ink-2 ring-1 ring-line"}`}>
+              <Link key={n.href} href={n.href} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs ${active(n.href) ? "bg-ink text-white" : "bg-surface text-ink-2 ring-1 ring-line hover:bg-subtle hover:text-ink hover:ring-primary/40"}`}>
                 <n.icon size={14} strokeWidth={1.8} />
                 {n.label}
               </Link>
