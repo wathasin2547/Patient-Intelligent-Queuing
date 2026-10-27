@@ -4,11 +4,11 @@
 // weights, red flags, onsite-only codes and the question set are all editable.
 // Records that may already be referenced are deactivated, not deleted.
 
-import { Building2, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
+import { Building2, HeartPulse, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
 import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
-import { newId } from "@/lib/mock/logic";
+import { maxSafeBonusMinutes, newId } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import type { Level, Question, Role, SymptomCode } from "@/lib/mock/types";
 
@@ -125,7 +125,51 @@ function Departments() {
         </Field>
         <p className="mt-3 text-xs text-ink-3">ระบบเรียกผู้ป่วยได้ทีละคิว ถ้ากำลังตรวจอยู่อีกแผนก ระบบเก็บลำดับไว้และเรียกคนถัดไปแทน</p>
       </Card>
+      <RiskSettings />
     </div>
+  );
+}
+
+// ── queue risk factors (D in P = B + α(W + D)) ──
+
+const AGE_GROUPS = ["0-5", "6-17", "18-59", "60+"];
+const BONUS_CHOICES = [0, 5, 10, 15, 20, 25, 30, 40];
+
+function RiskSettings() {
+  const { state, update } = useMock();
+  const st = state.settings;
+  const limit = maxSafeBonusMinutes();
+  // a choice is offered only if age + chronic stays below the narrowest level gap
+  const allowed = (n: number, other: number) => n + other < limit;
+  const set = (patch: Partial<typeof st>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+  const toggleAge = (g: string) =>
+    set({ priorityAgeGroups: st.priorityAgeGroups.includes(g) ? st.priorityAgeGroups.filter((x) => x !== g) : [...st.priorityAgeGroups, g] });
+  return (
+    <Card title="ปัจจัยเสี่ยงในการจัดคิว" icon={HeartPulse} className="xl:col-start-2">
+      <div className="flex flex-col gap-3">
+        <Field label="ช่วงอายุที่ได้คิวก่อน">
+          <div className="flex flex-wrap gap-3 text-sm">
+            {AGE_GROUPS.map((g) => (
+              <label key={g} className="flex items-center gap-1.5">
+                <input type="checkbox" checked={st.priorityAgeGroups.includes(g)} onChange={() => toggleAge(g)} />
+                {g} ปี
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="แต้มต่อของช่วงอายุข้างต้น (นาที)">
+          <select value={st.ageBonusMinutes} onChange={(e) => set({ ageBonusMinutes: Number(e.target.value) })} className="input">
+            {BONUS_CHOICES.map((n) => <option key={n} value={n} disabled={!allowed(n, st.chronicBonusMinutes)}>{n} นาที</option>)}
+          </select>
+        </Field>
+        <Field label="แต้มต่อของผู้มีโรคประจำตัว (นาที)">
+          <select value={st.chronicBonusMinutes} onChange={(e) => set({ chronicBonusMinutes: Number(e.target.value) })} className="input">
+            {BONUS_CHOICES.map((n) => <option key={n} value={n} disabled={!allowed(n, st.ageBonusMinutes)}>{n} นาที</option>)}
+          </select>
+        </Field>
+      </div>
+      <p className="mt-3 text-xs text-ink-3">ผู้ป่วยกลุ่มนี้นับเวลารอเหมือนรอมาก่อนแล้วตามจำนวนนาทีที่ตั้ง ใช้จัดลำดับภายในระดับความเร่งด่วนเดียวกันเท่านั้น แต้มต่อรวมต้องน้อยกว่า {limit} นาที เพื่อไม่ให้ผู้ป่วยข้ามระดับ</p>
+    </Card>
   );
 }
 

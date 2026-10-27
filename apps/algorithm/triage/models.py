@@ -46,6 +46,8 @@ class WaitingQueue:
     priority_level: int
     check_in_time: datetime
     patient_id: str = ""  # one patient may wait in several departments at once
+    age_group: str | None = None  # Patient.ageGroup: "0-5" | "6-17" | "18-59" | "60+"
+    is_chronic: bool = False  # Patient.isChronic: has a chronic (underlying) disease
 
 
 @dataclass(frozen=True)

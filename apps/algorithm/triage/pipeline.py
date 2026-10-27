@@ -13,6 +13,7 @@ Step 11 (saving and notifying the patient) belongs to Next.js.
 from datetime import datetime
 
 from . import config, rules, scheduling
+from .config import LOAD_WINDOW_MINUTES
 from .llm import NoLLM, SymptomExtractor
 from .models import ReasonItem, TriageInput, TriageResult
 from .queueing import priority_score
@@ -93,7 +94,8 @@ def triage(
         result.next_shift_start = scheduling.next_shift_start(shifts, department, now)
         return result
     dept_waiting = [q for q in waiting if q.department_id == department]
-    result.doctor_id = scheduling.pick_doctor(on_shift, dept_waiting)
+    result.doctor_id = scheduling.pick_doctor(
+        on_shift, dept_waiting, repo.busy_doctor_ids(), repo.upcoming_appointments(now, LOAD_WINDOW_MINUTES))
     result.queue_score = priority_score(level, 0, config.base_scores(), config.alpha())
     return result
 

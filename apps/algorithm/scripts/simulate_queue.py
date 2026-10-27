@@ -2,7 +2,7 @@
 
     python -m scripts.simulate_queue                 # each mechanism on its own vs baseline
     python -m scripts.simulate_queue --alpha         # sweep alpha (starvation vs urgency)
-    python -m scripts.simulate_queue --load          # busy / normal / quiet days
+    python -m scripts.simulate_queue --load          # Kaggle day (rho 0.48) up to rho 0.95
     python -m scripts.simulate_queue --runs 100      # more replications (default 50)
 
 Every scenario uses the same simulated patients in each run, so differences come from the process.
@@ -12,6 +12,7 @@ import argparse
 import sys
 from dataclasses import replace
 
+from scripts.queueing_analysis import at_rho
 from triage.simulation import ABLATIONS, BASELINE, PIQ, Features, SimConfig, mean_ci, run_replications
 
 
@@ -52,7 +53,8 @@ def main() -> None:
     parser.add_argument("--load", action="store_true")
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
-    cfg = SimConfig()
+    # the Kaggle arrival rate leaves the bottleneck at rho 0.48; compare mechanisms on a busy day
+    cfg = at_rho(SimConfig(), 0.85)
 
     if args.alpha:
         scen = {"FCFS (ไม่จัดลำดับ)": Features(True, True, False, True, True)}
@@ -66,9 +68,9 @@ def main() -> None:
         return
 
     if args.load:
-        for rate, label in ((18, "วันปกติ"), (24, "วันค่อนข้างแน่น"), (28, "วันแน่นมาก")):
-            c = replace(cfg, arrivals_per_hour=rate)
-            print(f"\n== {label}: {rate} patients/h · {args.runs} runs ==")
+        for rho in (0.48, 0.70, 0.85, 0.95):
+            c = at_rho(SimConfig(), rho)
+            print(f"\n== rho {rho}: {c.arrivals_per_hour:.1f} patients/h · {args.runs} runs ==")
             table(run_replications(c, {"เดิม": BASELINE, "PIQ": PIQ}, args.runs), "เดิม")
         return
 

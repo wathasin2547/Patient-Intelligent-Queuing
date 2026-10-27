@@ -5,9 +5,16 @@
 import { bkkDate, MINUTE, minutesSince } from "./time";
 import type { Appointment, Doctor, Level, MockState, Queue, Shift } from "./types";
 
-// P = B[level] + α·W (eq. 3.2). Defaults match apps/algorithm/.env.example.
+// P = B[level] + α·(W + D) (eq. 3.2). Defaults match apps/algorithm/.env.example.
+// D (risk head start) comes from s.settings, like SystemSetting in the real system.
 export const BASE_SCORE: Record<Level, number> = { 1: 1000, 2: 1000, 3: 600, 4: 300, 5: 200 };
 export const ALPHA = 2;
+
+/** D must stay strictly below the narrowest level gap (white→green = 100 pts = 50 min) or a lower level ties a higher one. */
+export function maxSafeBonusMinutes(): number {
+  const scores = [2, 3, 4, 5].map((l) => BASE_SCORE[l as Level]).sort((a, b) => a - b);
+  return Math.min(...scores.slice(1).map((b, i) => b - scores[i])) / ALPHA;
+}
 export const NO_SHOW_MINUTES = 10; // UC13 exception: patient does not show up after being called
 export const PRE_NOTIFY_AHEAD = 3; // UC13 step 4: warn the patient 3 places away
 export const LOAD_WINDOW_MINUTES = 60; // UC10 step 2: appointments in the next hour count as load
@@ -27,8 +34,16 @@ export function waitingMinutes(q: Queue, s: MockState, now: number): number {
   return Math.max(0, (now - waitStart(q, s.appointments)) / MINUTE);
 }
 
+/** D: minutes of head start for older age and chronic disease (mirrors queueing.RiskBonus). */
+export function riskMinutes(q: Queue, s: MockState): number {
+  const p = s.patients.find((x) => x.id === q.patientId);
+  if (!p) return 0;
+  const { ageBonusMinutes, chronicBonusMinutes, priorityAgeGroups } = s.settings;
+  return (priorityAgeGroups.includes(p.ageGroup) ? ageBonusMinutes : 0) + (p.isChronic ? chronicBonusMinutes : 0);
+}
+
 export function queueScore(q: Queue, s: MockState, now: number): number {
-  return BASE_SCORE[q.priorityLevel] + ALPHA * waitingMinutes(q, s, now);
+  return BASE_SCORE[q.priorityLevel] + ALPHA * (waitingMinutes(q, s, now) + riskMinutes(q, s));
 }
 
 /** WAITING queues of one doctor, highest P first; ties go to whoever started waiting first. */
@@ -51,12 +66,14 @@ export function doctorsOnShift(s: MockState, now: number, departmentId?: string)
 /** Load = patients waiting + appointments in the next hour (report §3.4.8). */
 export function doctorLoad(s: MockState, doctorId: string, now: number) {
   const waiting = s.queues.filter((q) => q.doctorId === doctorId && q.status === "WAITING").length;
+  // the patient in the room counts too, otherwise an idle doctor and a busy one tie at 0
+  const inRoom = isDoctorBusy(s, doctorId) ? 1 : 0;
   const upcoming = s.appointments.filter((a) => {
     if (a.doctorId !== doctorId || a.status !== "SCHEDULED") return false;
     const t = new Date(a.appointmentTime).getTime();
     return t >= now && t < now + LOAD_WINDOW_MINUTES * MINUTE;
   }).length;
-  return { waiting, upcoming, total: waiting + upcoming };
+  return { waiting, inRoom, upcoming, total: waiting + inRoom + upcoming };
 }
 
 export function nextShiftStart(s: MockState, departmentId: string, now: number): string | null {

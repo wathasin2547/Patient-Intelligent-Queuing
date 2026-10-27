@@ -10,7 +10,7 @@ import type {
   ReasonItem, Screening, Shift, SymptomCode, User,
 } from "./types";
 
-export const MOCK_VERSION = 7;
+export const MOCK_VERSION = 9;
 
 /** Mock fallback consultation minutes per department, used by the ETA until real averages exist. */
 const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10 };
@@ -358,6 +358,6 @@ export function buildSeed(realNow: number): MockState {
     ],
     callEvents: [],
     acknowledgedRedFlags: [],
-    settings: { maxActiveQueues: 3 },
+    settings: { maxActiveQueues: 3, ageBonusMinutes: 30, chronicBonusMinutes: 15, priorityAgeGroups: ["60+"] },
   };
 }

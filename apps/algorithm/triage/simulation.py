@@ -9,13 +9,15 @@ BASELINE (current walk-in process)
 
 PIQ (this project)
   screening is done on the phone before arrival, so the patient goes straight into a queue
-  -> doctor with the fewest waiting patients (scheduling.pick_doctor)
+  -> least-loaded doctor, counting the patient in the room (scheduling.pick_doctor)
   -> ordered by P = B + alpha * W (queueing.pick_next, the production code)
   -> the system calls the next patient automatically when the doctor records the result
   -> some online-eligible patients take the online option and never join the onsite queue
 
-All parameters are ASSUMPTIONS unless a source is given; they live in SimConfig so they can be
-reported in the thesis and changed for a sensitivity analysis.
+Parameters marked [Kaggle] come from the hospital wait-time dataset analysed in thesis §3
+(docs/datasets/kaggle, 5,000 visits); scripts/queueing_analysis.py --kaggle prints them again.
+Everything else is an ASSUMPTION. They live in SimConfig so they can be reported in the thesis and
+changed for a sensitivity analysis.
 """
 
 import heapq
@@ -27,7 +29,7 @@ from datetime import datetime, timedelta, timezone
 
 from .config import DEFAULT_ALPHA, DEFAULT_BASE_SCORES
 from .models import WaitingQueue
-from .queueing import pick_next
+from .queueing import RiskBonus, pick_next
 from .scheduling import pick_doctor
 
 DAY_START = datetime(2026, 10, 1, 1, 0, tzinfo=timezone.utc)  # 08:00 Asia/Bangkok
@@ -35,20 +37,26 @@ DAY_START = datetime(2026, 10, 1, 1, 0, tzinfo=timezone.utc)  # 08:00 Asia/Bangk
 
 @dataclass
 class SimConfig:
-    arrivals_per_hour: float = 24.0          # assumption: ≈190 walk-in patients in 8 h
-    arrival_hours: float = 8.0               # patients arrive 08:00-16:00
+    arrivals_per_hour: float = 6.1           # [Kaggle] flat 08:00-16:00; experiments raise it to a target rho
+    arrival_hours: float = 8.0               # [Kaggle] patients arrive 08:00-16:00
     dept_mix: dict[str, float] = field(default_factory=lambda: {"MED": 0.50, "SURG": 0.20, "PED": 0.15, "ENT": 0.15})
-    level_mix: dict[int, float] = field(default_factory=lambda: {2: 0.05, 3: 0.25, 4: 0.55, 5: 0.15})
+    # [Kaggle] Emergency / Urgent / Semi-urgent / Non-urgent; Immediate (1.9%) goes to the ER, not the queue
+    level_mix: dict[int, float] = field(default_factory=lambda: {2: 0.081, 3: 0.196, 4: 0.302, 5: 0.421})
     # doctors: (department, shift start hour, shift end hour) — same roster as data/catalog.json
     doctors: list[tuple[str, int, int]] = field(default_factory=lambda: [
         ("MED", 8, 16), ("MED", 8, 16), ("SURG", 8, 16), ("PED", 8, 16), ("ENT", 8, 12)])
     nurses: int = 2                           # assumption: screening desk staff
-    nurse_minutes: tuple[float, float] = (4.3, 2.0)    # mean, sd — median 4.28 min in Moon et al. 2019
-    consult_minutes: tuple[float, float] = (8.0, 4.0)  # assumption
+    nurse_minutes: tuple[float, float] = (4.0, 1.2)     # [Kaggle] nurse to triage complete
+    consult_minutes: tuple[float, float] = (18.7, 9.1)  # [Kaggle] consultation duration
+    appointment_prob: float = 0.70           # [Kaggle] 70.2% arrive for an appointment
+    appointment_early: tuple[float, float] = (10.3, 15.3)  # [Kaggle] minutes before the slot (negative = late)
     manual_call_minutes: tuple[float, float] = (1.5, 0.8)  # assumption: staff notices, calls, patient walks in
     auto_call_minutes: tuple[float, float] = (0.5, 0.3)    # patient already warned 3 queues ahead, only walks in
     online_eligible_prob: dict[int, float] = field(default_factory=lambda: {4: 0.4, 5: 0.9})  # assumption
     online_uptake: float = 0.3               # assumption: share of eligible patients who accept online
+    elderly_prob: float = 0.245              # [Kaggle] Senior (61+)
+    chronic_prob: float = 0.30               # assumption: share with a chronic disease
+    risk: RiskBonus = field(default_factory=RiskBonus)  # D_j; RiskBonus(0, 0) switches it off
     base: dict[int, float] = field(default_factory=lambda: dict(DEFAULT_BASE_SCORES))
     alpha: float = DEFAULT_ALPHA
 
@@ -87,6 +95,9 @@ class Patient:
     call_delay_manual: float
     call_delay_auto: float
     wants_online: bool
+    age_group: str = "18-59"
+    is_chronic: bool = False
+    appointment: float | None = None   # slot time (minutes after 08:00); None for walk-in
 
 
 @dataclass
@@ -97,7 +108,15 @@ class Outcome:
 
     @property
     def wait(self) -> float | None:
-        return None if self.start is None else self.start - self.patient.arrival
+        """From arrival, or from the slot when an appointment patient came early (thesis W_j rule)."""
+        if self.start is None:
+            return None
+        return max(0.0, self.start - counted_from(self.patient, self.patient.arrival))
+
+
+def counted_from(p: Patient, t: float) -> float:
+    """W_j starts at the appointment slot if the patient is ready before it."""
+    return t if p.appointment is None else max(t, p.appointment)
 
 
 def lognormal(rng: random.Random, mean: float, sd: float) -> float:
@@ -111,6 +130,7 @@ def pick(rng: random.Random, mix: dict) -> object:
 
 def generate_patients(cfg: SimConfig, seed: int) -> list[Patient]:
     rng = random.Random(seed)
+    risk_rng = random.Random(seed * 7907 + 1)
     out, t, i = [], 0.0, 0
     while True:
         t += rng.expovariate(cfg.arrivals_per_hour / 60)
@@ -118,6 +138,9 @@ def generate_patients(cfg: SimConfig, seed: int) -> list[Patient]:
             return out
         level = pick(rng, cfg.level_mix)
         i += 1
+        appointment = None
+        if risk_rng.random() < cfg.appointment_prob:
+            appointment = t + risk_rng.gauss(*cfg.appointment_early)
         out.append(Patient(
             id=f"p{i:03d}",
             arrival=t,
@@ -127,7 +150,13 @@ def generate_patients(cfg: SimConfig, seed: int) -> list[Patient]:
             consult_time=lognormal(rng, *cfg.consult_minutes),
             call_delay_manual=lognormal(rng, *cfg.manual_call_minutes),
             call_delay_auto=lognormal(rng, *cfg.auto_call_minutes),
-            wants_online=rng.random() < cfg.online_eligible_prob.get(level, 0) * cfg.online_uptake,
+            # an appointment patient has already been booked onsite and is not offered the online option
+            wants_online=rng.random() < cfg.online_eligible_prob.get(level, 0) * cfg.online_uptake
+            and appointment is None,
+            # separate stream: adding risk factors must not change the other draws of a seed
+            age_group="60+" if risk_rng.random() < cfg.elderly_prob else "18-59",
+            is_chronic=risk_rng.random() < cfg.chronic_prob,
+            appointment=appointment,
         ))
 
 
@@ -161,11 +190,11 @@ def simulate(cfg: SimConfig, patients: list[Patient], f: Features, seed: int = 0
         if f.load_balance:
             waiting = [WaitingQueue(x.id, p.dept, did, x.level, _as_dt(enter_time[x.id]))
                        for did in ids for x in queue[did]]
-            doc = pick_doctor(ids, waiting)
+            doc = pick_doctor(ids, waiting, {d for d in ids if busy[d]})
         else:
             doc = rng.choice(ids)
         queue[doc].append(p)
-        enter_time[p.id] = t
+        enter_time[p.id] = counted_from(p, t)
         if not busy[doc]:
             push(t, "free", doc)
 
@@ -192,8 +221,9 @@ def simulate(cfg: SimConfig, patients: list[Patient], f: Features, seed: int = 0
             if busy[doc] or not queue[doc]:
                 continue
             if f.priority_aging:
-                waiting = [WaitingQueue(x.id, "", doc, x.level, _as_dt(enter_time[x.id])) for x in queue[doc]]
-                nxt_id = pick_next(waiting, _as_dt(t), cfg.base, cfg.alpha).queue.id
+                waiting = [WaitingQueue(x.id, "", doc, x.level, _as_dt(enter_time[x.id]), x.id,
+                                        x.age_group, x.is_chronic) for x in queue[doc]]
+                nxt_id = pick_next(waiting, _as_dt(t), cfg.base, cfg.alpha, risk=cfg.risk).queue.id
                 p = next(x for x in queue[doc] if x.id == nxt_id)
             else:
                 p = queue[doc][0]
@@ -226,6 +256,9 @@ def summarize(outcomes: list[Outcome]) -> dict:
     for o in seen:
         by_level[o.patient.level].append(o.wait)
     orange = by_level.get(2, [])
+    # D_j targets these patients: report their wait apart from everyone else's
+    risky = [o.wait for o in seen if o.patient.age_group == "60+" or o.patient.is_chronic]
+    others = [o.wait for o in seen if not (o.patient.age_group == "60+" or o.patient.is_chronic)]
     return {
         "patients": len(outcomes),
         "seenOnsite": len(seen),
@@ -236,6 +269,8 @@ def summarize(outcomes: list[Outcome]) -> dict:
         "meanWaitByLevel": {lv: sum(w) / len(w) for lv, w in sorted(by_level.items())},
         "maxWaitByLevel": {lv: max(w) for lv, w in sorted(by_level.items())},
         "orangeWithin10min": (sum(w <= 10 for w in orange) / len(orange)) if orange else float("nan"),
+        "meanWaitRisk": sum(risky) / len(risky) if risky else float("nan"),
+        "meanWaitOthers": sum(others) / len(others) if others else float("nan"),
     }
 
 

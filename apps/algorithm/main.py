@@ -82,6 +82,7 @@ class RankedOut(BaseModel):
     queueId: str
     priorityLevel: int
     waitingMinutes: float
+    riskMinutes: float = 0.0  # D_j: head start for older age / chronic disease
     score: float
     heldElsewhere: bool = False  # patient is busy in another queue: skipped now, keeps the place
 
@@ -148,9 +149,9 @@ def next_queue(
     busy = repo.busy_patient_ids()
     ranked = [
         RankedOut(queueId=r.queue.id, priorityLevel=r.queue.priority_level,
-                  waitingMinutes=round(r.waiting_minutes, 1), score=round(r.score, 1),
-                  heldElsewhere=r.queue.patient_id in busy)
-        for r in rank_queues(mine, now, config.base_scores(), config.alpha())
+                  waitingMinutes=round(r.waiting_minutes, 1), riskMinutes=r.bonus_minutes,
+                  score=round(r.score, 1), heldElsewhere=r.queue.patient_id in busy)
+        for r in rank_queues(mine, now, config.base_scores(), config.alpha(), repo.risk_bonus())
     ]
     nxt = next((r for r in ranked if not r.heldElsewhere), None)
     return NextQueueResponse(next=nxt, ranking=ranked)

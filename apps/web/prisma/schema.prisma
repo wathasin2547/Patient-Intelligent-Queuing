@@ -193,6 +193,10 @@ model User {
 
 // Admin-editable system settings (single document), kept out of code like the screening criteria
 model SystemSetting {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
-  maxActiveQueues Int    @default(3) // queues one patient may hold at once, one per department
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  maxActiveQueues     Int      @default(3) // queues one patient may hold at once, one per department
+  // D_j in P = B[L] + alpha * (W + D): head start in minutes for patients at higher risk while waiting
+  ageBonusMinutes     Int      @default(30)
+  chronicBonusMinutes Int      @default(15)
+  priorityAgeGroups   String[] @default(["60+"]) // Patient.ageGroup values that get ageBonusMinutes
 }

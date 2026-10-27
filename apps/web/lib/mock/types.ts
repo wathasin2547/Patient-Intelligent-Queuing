@@ -205,4 +205,9 @@ export type MockState = {
 export type Settings = {
   /** how many queues one patient may hold at once, one per department */
   maxActiveQueues: number;
+  /** D in P = B[L] + α(W + D): head start in minutes for patients at higher risk while waiting */
+  ageBonusMinutes: number;
+  chronicBonusMinutes: number;
+  /** Patient.ageGroup values that get ageBonusMinutes */
+  priorityAgeGroups: string[];
 };

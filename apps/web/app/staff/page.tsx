@@ -179,7 +179,7 @@ export default function Dashboard() {
                               <LevelDot level={q.priorityLevel} className="h-1.5 w-1.5" />{q.queueNumber}
                             </span>
                           ))}
-                          <span className="ml-auto text-ink-3" title="ภาระงาน = ผู้ป่วยรอ + นัดหมายในชั่วโมงถัดไป">รอ {load.waiting} · นัด {load.upcoming}</span>
+                          <span className="ml-auto text-ink-3" title="ภาระงาน = ผู้ป่วยรอ + ผู้ป่วยในห้องตรวจ + นัดหมายในชั่วโมงถัดไป">รอ {load.waiting} · นัด {load.upcoming}</span>
                         </div>
                       </div>
                     </Link>

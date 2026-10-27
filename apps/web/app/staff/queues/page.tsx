@@ -111,7 +111,7 @@ function QueuesBoard() {
                   <div className="truncate font-medium">{doc.name}</div>
                   <div className="text-xs text-ink-3">{deptMap.get(doc.departmentId)?.name} · เวร {fmtTime(sh.startTime)}–{fmtTime(sh.endTime)}</div>
                 </div>
-                <span className="rounded-full bg-subtle px-3 py-1 text-xs text-ink-2" title="ผู้ป่วยรอ + นัดหมายในชั่วโมงถัดไป">ภาระงาน {load.total}</span>
+                <span className="rounded-full bg-subtle px-3 py-1 text-xs text-ink-2" title="ผู้ป่วยรอ + ผู้ป่วยในห้องตรวจ + นัดหมายในชั่วโมงถัดไป">ภาระงาน {load.total}</span>
               </header>
 
               <div className="mt-5">

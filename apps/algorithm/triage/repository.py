@@ -6,13 +6,16 @@ so vignette runs use the same catalog that `npm run db:seed` puts in the DB.
 """
 
 import json
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Protocol
 
 from pymongo import MongoClient
 
+from .config import DEFAULT_AGE_BONUS_MINUTES, DEFAULT_CHRONIC_BONUS_MINUTES, DEFAULT_PRIORITY_AGE_GROUPS
 from .models import Option, Question, Shift, SymptomCode, WaitingQueue
+from .queueing import RiskBonus
 
 CATALOG_PATH = Path(__file__).resolve().parents[3] / "data" / "catalog.json"
 BANGKOK = timezone(timedelta(hours=7))
@@ -24,6 +27,9 @@ class Repository(Protocol):
     def shifts(self) -> list[Shift]: ...
     def waiting_queues(self) -> list[WaitingQueue]: ...
     def busy_patient_ids(self) -> set[str]: ...
+    def busy_doctor_ids(self) -> set[str]: ...
+    def upcoming_appointments(self, now: datetime, minutes: int) -> dict[str, int]: ...
+    def risk_bonus(self) -> RiskBonus: ...
 
 
 def _options(raw: list[dict]) -> list[Option]:
@@ -65,8 +71,13 @@ class MongoRepository:
         return out
 
     def waiting_queues(self) -> list[WaitingQueue]:
-        return [
-            WaitingQueue(
+        waiting = list(self.db["Queue"].find({"status": "WAITING"}))
+        ids = [q["patientId"] for q in waiting if q.get("patientId")]
+        patients = {p["_id"]: p for p in self.db["Patient"].find({"_id": {"$in": ids}})}
+        out = []
+        for q in waiting:
+            pt = patients.get(q.get("patientId"), {})
+            out.append(WaitingQueue(
                 id=str(q["_id"]),
                 department_id=str(q["departmentId"]),
                 doctor_id=str(q["doctorId"]) if q.get("doctorId") else None,
@@ -74,14 +85,37 @@ class MongoRepository:
                 check_in_time=q["checkInTime"],
                 # queues saved before Queue.patientId existed have no patient: never treated as busy
                 patient_id=str(q.get("patientId", "")),
-            )
-            for q in self.db["Queue"].find({"status": "WAITING"})
-        ]
+                age_group=pt.get("ageGroup"),
+                is_chronic=bool(pt.get("isChronic", False)),
+            ))
+        return out
+
+    def risk_bonus(self) -> RiskBonus:
+        """D_j settings; defaults apply until the admin saves SystemSetting."""
+        s = self.db["SystemSetting"].find_one() or {}
+        return RiskBonus(
+            age_minutes=float(s.get("ageBonusMinutes", DEFAULT_AGE_BONUS_MINUTES)),
+            chronic_minutes=float(s.get("chronicBonusMinutes", DEFAULT_CHRONIC_BONUS_MINUTES)),
+            age_groups=frozenset(s.get("priorityAgeGroups") or DEFAULT_PRIORITY_AGE_GROUPS),
+        )
 
     def busy_patient_ids(self) -> set[str]:
         """Patients being called or examined right now, in any department."""
         busy = self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}, "patientId": {"$exists": True}})
         return {str(q["patientId"]) for q in busy}
+
+    def busy_doctor_ids(self) -> set[str]:
+        """Doctors with a patient called or in the room right now."""
+        busy = self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}, "doctorId": {"$ne": None}})
+        return {str(q["doctorId"]) for q in busy}
+
+    def upcoming_appointments(self, now: datetime, minutes: int) -> dict[str, int]:
+        """Booked appointments per doctor due within the next `minutes` (not checked in yet)."""
+        due = self.db["Appointment"].find({
+            "status": "SCHEDULED",
+            "appointmentTime": {"$gte": now, "$lt": now + timedelta(minutes=minutes)},
+        })
+        return dict(Counter(str(a["doctorId"]) for a in due))
 
     def ping(self) -> None:
         self.client.admin.command("ping")
@@ -149,3 +183,12 @@ class CatalogRepository:
 
     def busy_patient_ids(self) -> set[str]:
         return set(self._busy)
+
+    def busy_doctor_ids(self) -> set[str]:
+        return set()
+
+    def upcoming_appointments(self, now: datetime, minutes: int) -> dict[str, int]:
+        return {}
+
+    def risk_bonus(self) -> RiskBonus:
+        return RiskBonus()
