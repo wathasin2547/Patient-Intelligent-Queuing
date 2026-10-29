@@ -9,12 +9,13 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { CalledActions, CurrentPatient, PFormula, QueueRow } from "@/components/queue";
 import { Avatar, btn, Card, doctorInitials, Empty, LevelChip, Notice, PageHeader, PillSelect, QUEUE_STATUS, Segmented, StatusChip, Tag } from "@/components/ui";
-import { issueWalkIn } from "@/lib/mock/actions";
+import { callNext, issueWalkIn } from "@/lib/mock/actions";
 import { doctorLoad, doctorsOnShift, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
 import { PRESETS, simulateScreening } from "@/lib/mock/simulate";
 import { useLookups, useMock } from "@/lib/mock/store";
 import { bkkDate, fmtTime } from "@/lib/mock/time";
 import type { CallEvent, QueueStatus } from "@/lib/mock/types";
+
 
 const EVENT: Record<CallEvent["kind"], { label: string; icon: LucideIcon; cls: string }> = {
   CALL: { label: "เรียก", icon: Megaphone, cls: "bg-accent text-accent-ink" },
@@ -61,6 +62,12 @@ function QueuesBoard() {
     const r = issueWalkIn(state, now, simulateScreening(state, PRESETS[i]), state.patients.length + 1);
     update(() => r.state);
     setSimMsg(r.message);
+  }
+
+  function call(doctorId: string) {
+    const r = callNext(state, now, doctorId);
+    if (r.error) return window.alert(r.error);
+    update((s, n) => callNext(s, n, doctorId).state);
   }
 
   return (
@@ -122,7 +129,14 @@ function QueuesBoard() {
                     {current.status === "CALLED" && <div className="mt-3"><CalledActions q={current} small /></div>}
                   </>
                 ) : (
-                  <Empty>ว่าง · ไม่มีผู้ป่วยรอ</Empty>
+                  <div className="flex flex-col gap-3">
+                    <Empty>ว่าง · {line.length > 0 ? `มีผู้ป่วยรอ ${line.length} ราย` : "ไม่มีผู้ป่วยรอ"}</Empty>
+                    {line.length > 0 && (
+                      <button onClick={() => call(doc.id)} className={btn.primary}>
+                        <Megaphone size={16} strokeWidth={1.8} /> เรียกคิวถัดไป
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

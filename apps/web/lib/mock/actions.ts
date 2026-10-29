@@ -1,12 +1,13 @@
 // State transitions for the mock store. Each function is pure: (state, now, payload) -> state.
 // They mirror what the Next.js API routes will do once the database is wired up.
 
-import { APPOINTMENT_LEVEL, newId, nextQueueNumber, nextShiftStart, pickDoctor, queueLimitError, shiftNow } from "./logic";
+import { APPOINTMENT_LEVEL, isDoctorBusy, isPatientBusy, newId, nextQueueNumber, nextShiftStart, pickDoctor, queueLimitError, rankedWaiting, shiftNow } from "./logic";
 import { addDays, bkkDate } from "./time";
 import type {
   Appointment, Delivery, DeliveryMethod, DeliveryStatus, Department, Doctor, Level, MockState, Patient,
   PrescriptionItem, Question, Queue, Role, Screening, Shift, SymptomCode, User,
 } from "./types";
+
 
 const iso = (now: number) => new Date(now).toISOString();
 
@@ -58,6 +59,17 @@ export function markNoShow(s: MockState, now: number, queueId: string): MockStat
     ...s,
     queues: s.queues.map((x) => (x.id === queueId ? { ...x, status: "NO_SHOW", finishedTime: iso(now) } : x)),
     callEvents: [...s.callEvents, { id: newId("ev"), queueId, doctorId: q.doctorId ?? "", kind: "NO_SHOW", at: iso(now) }],
+  };
+}
+
+// ── เจ้าหน้าที่หรือแพทย์กดเรียกคิวถัดไปเอง (ระหว่างที่ยังไม่เปิดระบบเรียกอัตโนมัติ UC13) ──
+// เลือกคนที่คะแนน P สูงสุดในบรรดาคนที่เรียกได้ (ข้ามคนที่ติดตรวจอยู่อีกแผนก แต่ยังเก็บลำดับไว้)
+export function callNext(s: MockState, now: number, doctorId: string): { state: MockState; error?: string } {
+  if (isDoctorBusy(s, doctorId)) return { state: s, error: "แพทย์กำลังตรวจหรือเรียกผู้ป่วยอยู่" };
+  const pick = rankedWaiting(s, doctorId, now).find((q) => !isPatientBusy(s, q.patientId));
+  if (!pick) return { state: s, error: "ไม่มีผู้ป่วยที่เรียกได้ตอนนี้" };
+  return {
+    state: { ...s, queues: s.queues.map((q) => (q.id === pick.id ? { ...q, status: "CALLED", calledTime: iso(now) } : q)) },
   };
 }
 

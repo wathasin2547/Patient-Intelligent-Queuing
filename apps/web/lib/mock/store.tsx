@@ -72,6 +72,34 @@ async function pull() {
   }
 }
 
+// ส่งคิวที่เปลี่ยนสถานะ/เวลาไปบันทึกที่เซิร์ฟเวอร์ แล้วดึงข้อมูลจริงกลับมาทับ
+// ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น แพทย์กำลังตรวจอยู่) จะแจ้งเตือน และหน้าจอย้อนกลับเป็นค่าจริงเอง
+async function sync(before: MockState, after: MockState) {
+  const old = new Map(before.queues.map((q) => [q.id, q]));
+  const changes = after.queues
+    .filter((q) => {
+      const o = old.get(q.id);
+      return o && (o.status !== q.status || o.calledTime !== q.calledTime || o.finishedTime !== q.finishedTime);
+    })
+    .map((q) => ({ id: q.id, status: q.status, calledTime: q.calledTime, finishedTime: q.finishedTime }));
+  if (changes.length === 0) return;
+
+  try {
+    const res = await fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queues: changes }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      window.alert(body?.error ?? "บันทึกไม่สำเร็จ");
+    }
+  } catch {
+    window.alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+  }
+  await pull();
+}
+
 function start() {
   if (started) return;
   started = true;
@@ -101,7 +129,11 @@ function subscribe(listener: () => void) {
 
 const actions = {
   update(fn: (s: MockState, now: number) => MockState) {
-    if (snapshot) commit(fn(snapshot.state, simNow(snapshot.state)));
+    if (!snapshot) return;
+    const before = snapshot.state;
+    const after = fn(before, simNow(before));
+    commit(after);
+    if (useReal) void sync(before, after);
   },
   advance(minutes: number) {
     if (useReal) return;

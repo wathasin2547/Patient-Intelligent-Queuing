@@ -1,4 +1,5 @@
 const REPLY_URL = "https://api.line.me/v2/bot/message/reply";
+const PUSH_URL = "https://api.line.me/v2/bot/message/push";
 
 export type QuickReplyItem = {
   type: "action";
@@ -40,5 +41,16 @@ export async function replyMessage(
   });
   if (!res.ok) {
     throw new Error(`LINE reply failed: ${res.status} ${await res.text()}`);
+  }
+}
+// push ข้อความเเจ้งว่าถึงคิวเเล้ว
+export async function pushMessage(to: string, messages: LineMessage[], accessToken: string): Promise<void> {
+  const res = await fetch(PUSH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ to, messages }),
+  });
+  if (!res.ok) {
+    throw new Error(`LINE push failed: ${res.status} ${await res.text()}`);
   }
 }
