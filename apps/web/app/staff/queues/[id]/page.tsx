@@ -1,27 +1,38 @@
 "use client";
 
-// UC08 review/edit the screening result + UC09 record the exam result.
+// UC08 review/edit the screening result (staff) + UC09 record the exam result (doctor).
 
-import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, MessageSquareText, Pill, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, Forward, Layers, MessageSquareText, Pill, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { PrescriptionForm } from "@/components/prescription-form";
+import { CalledActions } from "@/components/queue";
 import { btn, Card, Field, LEVEL, LevelChip, LevelDot, Notice, StatusChip, Tag } from "@/components/ui";
-import { DELIVERY_LABEL, editScreening, recordResult, updateDeliveryStatus } from "@/lib/mock/actions";
-import { doctorsOnShift, nextShiftStart, positionInLine, queueScore, waitingMinutes } from "@/lib/mock/logic";
+import { DELIVERY_LABEL, editScreening, referQueue, updateDeliveryStatus } from "@/lib/mock/actions";
+import { doctorsOnShift, estimateCallTime, nextShiftStart, positionInLine, queueScore, waitingMinutes } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
-import { fmtShortDate, fmtTime } from "@/lib/mock/time";
-import type { DeliveryStatus, Level, PrescriptionItem, Queue } from "@/lib/mock/types";
+import { bkkDate, fmtShortDate, fmtTime } from "@/lib/mock/time";
+import type { DeliveryStatus, Level, Queue } from "@/lib/mock/types";
+
+function useMe() {
+  const { state } = useMock();
+  const me = state.users.find((u) => u.id === state.sessionUserId);
+  return { me, isDoctor: me?.role === "DOCTOR" };
+}
 
 export default function QueueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { state } = useMock();
+  const { me, isDoctor } = useMe();
   const q = state.queues.find((x) => x.id === id);
-  if (!q) {
+  // a doctor sees only the patients assigned to them
+  const message = !q ? "ไม่พบคิวนี้" : isDoctor && q.doctorId !== me?.doctorId ? "คิวนี้ไม่ได้อยู่ในความรับผิดชอบของคุณ" : null;
+  if (!q || message) {
     return (
       <div className="mx-auto max-w-[1200px]">
         <BackLink />
-        <p className="mt-6 text-ink-3">ไม่พบคิวนี้</p>
+        <p className="mt-6 text-ink-3">{message}</p>
       </div>
     );
   }
@@ -30,9 +41,10 @@ export default function QueueDetailPage() {
 }
 
 function BackLink() {
+  const { isDoctor } = useMe();
   return (
-    <Link href="/staff/queues" className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm text-ink-2 ring-1 ring-line hover:text-ink">
-      <ArrowLeft size={15} strokeWidth={1.8} /> จัดการคิว
+    <Link href={isDoctor ? "/staff/doctor" : "/staff/queues"} className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm text-ink-2 ring-1 ring-line hover:text-ink">
+      <ArrowLeft size={15} strokeWidth={1.8} /> {isDoctor ? "คิวของฉัน" : "จัดการคิว"}
     </Link>
   );
 }
@@ -40,6 +52,7 @@ function BackLink() {
 function QueueDetail({ q }: { q: Queue }) {
   const { state, now } = useMock();
   const { dept, doctor, patient: patientMap, code, user } = useLookups();
+  const { isDoctor } = useMe();
   const patient = patientMap.get(q.patientId);
   const screening = state.screenings.find((s) => s.id === q.screeningId);
   const appointment = state.appointments.find((a) => a.id === q.appointmentId);
@@ -59,7 +72,7 @@ function QueueDetail({ q }: { q: Queue }) {
               <LevelChip level={q.priorityLevel} />
               <StatusChip status={q.status} />
               {q.visitType === "ONLINE" && <Tag tone="sky">ตรวจออนไลน์</Tag>}
-              {q.appointmentId && <Tag tone="lime">มาตามนัดหมาย</Tag>}
+              {q.appointmentId && <Tag tone="accent">มาตามนัดหมาย</Tag>}
             </div>
           </div>
           <dl className="grid flex-1 grid-cols-2 gap-2 sm:max-w-[560px] sm:grid-cols-3">
@@ -98,7 +111,7 @@ function QueueDetail({ q }: { q: Queue }) {
                   <div className="text-xs text-ink-3">ข้อความที่ผู้ป่วยพิมพ์ (ต้นฉบับ)</div>
                   <p className="mt-1 text-[15px] leading-relaxed">{screening.freeTextInput ? `“${screening.freeTextInput}”` : <span className="text-ink-3">— ไม่ได้พิมพ์ —</span>}</p>
                 </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-subtle pt-4 text-sm">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line/70 pt-4 text-sm">
                   <span className="flex items-center gap-1.5 text-xs text-ink-3"><Sparkles size={14} strokeWidth={1.8} /> รหัสอาการจาก LLM</span>
                   {screening.llmStatus === "ok" && (screening.llmCodes.length ? screening.llmCodes.map((c) => <code key={c} className="rounded-full bg-subtle px-2.5 py-0.5 text-xs">{c}</code>) : <span className="text-xs text-ink-3">ไม่พบรหัสที่ตรงกับบัญชี</span>)}
                   {screening.llmStatus === "skipped" && <span className="text-xs text-ink-3">ไม่ได้เรียก (ไม่มีข้อความ)</span>}
@@ -114,8 +127,9 @@ function QueueDetail({ q }: { q: Queue }) {
         </div>
 
         <div className="flex flex-col gap-5">
-          <EditCard q={q} />
-          <ResultCard q={q} />
+          {isDoctor ? <ResultCard q={q} /> : <><EditCard q={q} /><ResultCard q={q} /></>}
+          {isDoctor && q.status === "IN_PROGRESS" && <ReferCard q={q} />}
+          <OtherQueuesCard q={q} />
           {q.editedBy && (
             <p className="px-2 text-xs text-ink-3">
               แก้ไขล่าสุดโดย {user.get(q.editedBy)?.username} เมื่อ {fmtTime(q.editedAt!)} น. · ผลเดิมของระบบยังเก็บไว้ ใช้นับว่าอัลกอริทึมถูกแก้กี่ครั้ง
@@ -127,6 +141,79 @@ function QueueDetail({ q }: { q: Queue }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** The same patient's other queues today: shows staff and doctors when a patient is held elsewhere. */
+function OtherQueuesCard({ q }: { q: Queue }) {
+  const { state, now } = useMock();
+  const { dept } = useLookups();
+  const { isDoctor } = useMe();
+  const others = state.queues
+    .filter((x) => x.patientId === q.patientId && x.id !== q.id && bkkDate(x.checkInTime) === bkkDate(now))
+    .sort((a, b) => a.checkInTime.localeCompare(b.checkInTime));
+  if (others.length === 0) return null;
+  return (
+    <Card title="คิวอื่นของผู้ป่วยวันนี้" icon={Layers} note="ระบบเรียกได้ทีละคิว ถ้ากำลังตรวจอยู่อีกแผนก ระบบเก็บลำดับไว้">
+      <ul className="flex flex-col gap-2">
+        {others.map((x) => {
+          const eta = estimateCallTime(state, x, now);
+          const row = (
+            <>
+              <span className="font-mono font-semibold">{x.queueNumber}</span>
+              <span className="flex-1 truncate text-ink-2">{dept.get(x.departmentId)?.name}{x.referredFromQueueId === q.id ? " · ส่งต่อจากคิวนี้" : ""}</span>
+              {eta && <span className="text-xs text-ink-3">~{fmtTime(eta)}</span>}
+              <StatusChip status={x.status} />
+            </>
+          );
+          // a doctor may open only their own patients' queues
+          return (
+            <li key={x.id}>
+              {isDoctor ? (
+                <div className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm">{row}</div>
+              ) : (
+                <Link href={`/staff/queues/${x.id}`} className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-2.5 text-sm hover:bg-subtle-2">{row}</Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+/** UC09 alternate flow: send the patient to another department today instead of another day. */
+function ReferCard({ q }: { q: Queue }) {
+  const { state, update } = useMock();
+  const options = state.departments.filter((d) => d.isActive && d.id !== q.departmentId);
+  const [dept, setDept] = useState(options[0]?.id ?? "");
+  const [level, setLevel] = useState<Level>(q.priorityLevel === 1 ? 2 : q.priorityLevel);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function refer() {
+    let outcome: { ok: boolean; text: string } = { ok: false, text: "" };
+    update((s, n) => {
+      const r = referQueue(s, n, { fromQueueId: q.id, departmentId: dept, priorityLevel: level });
+      outcome = r.error ? { ok: false, text: r.error } : { ok: true, text: `ออกคิว ${r.queueNumber} แล้ว ผู้ป่วยได้รับข้อความทาง LINE และรอพร้อมกันได้ทันที` };
+      return r.state;
+    });
+    setResult(outcome);
+  }
+
+  return (
+    <Card title="ส่งต่อแผนกอื่น" icon={Forward} note="ตรวจได้ในวันนี้ ไม่ต้องมาใหม่อีกวัน">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <select value={dept} onChange={(e) => setDept(e.target.value)} className="input">
+          {options.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+        <select value={level} onChange={(e) => setLevel(Number(e.target.value) as Level)} className="input">
+          {([2, 3, 4, 5] as Level[]).map((l) => <option key={l} value={l}>{LEVEL[l].name}</option>)}
+        </select>
+      </div>
+      <button onClick={refer} disabled={!dept} className={`${btn.secondary} mt-3 w-full`}>ส่งต่อและออกคิว</button>
+      {result && <div className="mt-3"><Notice tone={result.ok ? "accent" : "amber"}>{result.text}</Notice></div>}
+      <p className="mt-3 text-xs text-ink-3">คิวใหม่เริ่มนับเวลารอตั้งแต่ตอนส่งต่อ จึงไม่แซงผู้ป่วยที่รอแผนกนั้นอยู่ก่อน</p>
+    </Card>
   );
 }
 
@@ -159,7 +246,7 @@ function ScreeningResult({ q }: { q: Queue }) {
       </div>
       {(changedDept || changedLevel) && (
         <div className="mt-2">
-          <Notice tone="lime">
+          <Notice tone="accent">
             เจ้าหน้าที่ปรับเป็น {changedDept && <b>{dept.get(q.departmentId)?.name}</b>}
             {changedDept && changedLevel && " · "}
             {changedLevel && <b>ระดับ{LEVEL[q.priorityLevel].name}</b>}
@@ -187,7 +274,7 @@ function ScreeningResult({ q }: { q: Queue }) {
           <div className="mt-6 text-xs text-ink-3">เหตุผล · รหัสอาการที่ให้คะแนนแผนก{dept.get(algoDept ?? "")?.name}</div>
           <ul className="mt-2 flex flex-col">
             {s.reason.map((r) => (
-              <li key={r.code} className="flex items-center gap-3 border-t border-subtle py-2.5 text-sm first:border-0">
+              <li key={r.code} className="flex items-center gap-3 border-t border-line/70 py-2.5 text-sm first:border-0">
                 <span className="flex-1">{code.get(r.code)?.label ?? r.code}</span>
                 <code className="text-xs text-ink-3">{r.code}</code>
                 <span className="w-10 text-right font-medium tabular-nums">+{r.weight}</span>
@@ -251,21 +338,17 @@ function EditCard({ q }: { q: Queue }) {
   );
 }
 
-const EMPTY_ITEM: PrescriptionItem = { name: "", dosage: "", quantity: "" };
-
 function ResultCard({ q }: { q: Queue }) {
   const { state, update } = useMock();
-  const [items, setItems] = useState<PrescriptionItem[]>([{ ...EMPTY_ITEM }]);
-  const [days, setDays] = useState("7");
+  const { isDoctor } = useMe();
   const rx = state.prescriptions.find((r) => r.queueId === q.id);
   const delivery = rx && state.deliveries.find((d) => d.prescriptionId === rx.id);
   const refill = rx && state.refills.find((r) => r.prescriptionId === rx.id);
-  const setItem = (i: number, patch: Partial<PrescriptionItem>) => setItems((all) => all.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   if (q.status === "DONE") {
     return (
       <Card title="ผลการตรวจ" icon={Pill} note="UC09">
-        <Notice tone="lime">บันทึกผลการตรวจแล้ว{q.finishedTime ? ` เมื่อ ${fmtTime(q.finishedTime)} น.` : ""}</Notice>
+        <Notice tone="accent">บันทึกผลการตรวจแล้ว{q.finishedTime ? ` เมื่อ ${fmtTime(q.finishedTime)} น.` : ""}</Notice>
         {!rx && <p className="mt-3 text-sm text-ink-3">ไม่มีการสั่งจ่ายยา</p>}
         {rx && (
           <>
@@ -278,9 +361,14 @@ function ResultCard({ q }: { q: Queue }) {
               ))}
             </ul>
             <p className="mt-2 text-xs text-ink-3">จ่ายยาสำหรับ {rx.daysSupply} วัน{refill ? ` · เตือนรับยารอบถัดไป ${refill.dueDate}` : ""}</p>
-            <div className="mt-4 border-t border-subtle pt-4 text-sm">
+            <div className="mt-4 border-t border-line/70 pt-4 text-sm">
               {!delivery && <span className="text-ink-3">รอผู้ป่วยเลือกวิธีรับยาผ่าน LINE (UC06)</span>}
-              {delivery && (
+              {delivery && isDoctor && (
+                <div className="text-ink-2">
+                  {delivery.method === "SHIP" ? "จัดส่งถึงบ้าน" : "รับที่ห้องยาโรงพยาบาล"} · {DELIVERY_LABEL[delivery.status]}
+                </div>
+              )}
+              {delivery && !isDoctor && (
                 <div className="flex flex-col gap-3">
                   <div className="text-ink-2">{delivery.method === "SHIP" ? `จัดส่งถึงบ้าน · ${delivery.address}` : "รับที่ห้องยาโรงพยาบาล"}</div>
                   <Field label="สถานะการส่งมอบยา">
@@ -299,44 +387,31 @@ function ResultCard({ q }: { q: Queue }) {
     );
   }
 
-  if (q.status !== "IN_PROGRESS") {
+  if (q.status === "CALLED" && isDoctor) {
     return (
       <Card title="บันทึกผลการตรวจ" icon={Pill} note="UC09">
+        <p className="mb-4 text-sm text-ink-3">
+          {q.visitType === "ONLINE"
+            ? "ระบบส่งลิงก์ห้องตรวจออนไลน์ให้ผู้ป่วยแล้ว เริ่มวิดีโอคอลเพื่อตรวจ แล้วจึงบันทึกผลได้"
+            : "ระบบเรียกผู้ป่วยแล้ว กดปุ่มด้านล่างเมื่อผู้ป่วยเข้าห้องตรวจ แล้วจึงบันทึกผลได้"}
+        </p>
+        <CalledActions q={q} />
+      </Card>
+    );
+  }
+
+  if (q.status !== "IN_PROGRESS" || !isDoctor) {
+    return (
+      <Card title="บันทึกผลการตรวจ" icon={Pill} note="UC09 · แพทย์">
         <p className="text-sm text-ink-3">
           {q.status === "WAITING" && "ยังไม่ถึงคิว ระบบจะเรียกผู้ป่วยเองเมื่อแพทย์ว่าง"}
-          {q.status === "CALLED" && "ระบบเรียกผู้ป่วยแล้ว กด “ผู้ป่วยเข้าห้องตรวจ” ที่หน้าจัดการคิวเมื่อผู้ป่วยมาถึง"}
+          {q.status === "CALLED" && (q.visitType === "ONLINE" ? "ระบบส่งลิงก์ห้องตรวจออนไลน์ให้ผู้ป่วยแล้ว รอแพทย์เริ่มวิดีโอคอล" : "ระบบเรียกผู้ป่วยแล้ว กด “ผู้ป่วยเข้าห้องตรวจ” ที่หน้าจัดการคิวเมื่อผู้ป่วยมาถึง")}
+          {q.status === "IN_PROGRESS" && "อยู่ระหว่างตรวจ แพทย์เป็นผู้บันทึกผลการตรวจและรายการยา"}
           {(q.status === "NO_SHOW" || q.status === "CANCELLED") && "คิวนี้สิ้นสุดแล้วโดยไม่ได้ตรวจ"}
         </p>
       </Card>
     );
   }
 
-  return (
-    <Card title="บันทึกผลการตรวจ" icon={Pill} note="UC09">
-      <div className="mb-1.5 text-xs font-medium text-ink-2">รายการยาที่สั่งจ่าย <span className="font-normal text-ink-3">(เว้นว่างได้ถ้าไม่สั่งยา)</span></div>
-      <div className="flex flex-col gap-2">
-        {items.map((m, i) => (
-          <div key={i} className="flex flex-col gap-1.5 rounded-2xl bg-subtle p-2">
-            <input placeholder="ชื่อยา" value={m.name} onChange={(e) => setItem(i, { name: e.target.value })} className="input bg-surface" />
-            <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-1.5">
-              <input placeholder="วิธีใช้" value={m.dosage} onChange={(e) => setItem(i, { dosage: e.target.value })} className="input bg-surface" />
-              <input placeholder="จำนวน" value={m.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} className="input bg-surface" />
-            </div>
-          </div>
-        ))}
-      </div>
-      <button onClick={() => setItems((all) => [...all, { ...EMPTY_ITEM }])} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-2 hover:text-ink">
-        <Plus size={14} strokeWidth={2} /> เพิ่มรายการยา
-      </button>
-      <div className="mt-4 flex items-center gap-2 text-sm">
-        <span className="text-xs text-ink-2">จ่ายยาสำหรับ</span>
-        <input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value.replace(/\D/g, ""))} className="input w-20 text-center" />
-        <span className="text-xs text-ink-2">วัน</span>
-      </div>
-      <button onClick={() => update((s, n) => recordResult(s, n, { queueId: q.id, items, daysSupply: Number(days) || 0 }))} className={`${btn.accent} mt-5 w-full`}>
-        บันทึกผลการตรวจ
-      </button>
-      <p className="mt-3 text-xs text-ink-3">ถ้ามีการสั่งยา ระบบส่งข้อความให้ผู้ป่วยเลือกวิธีรับยา และสร้างรอบเตือนรับยาให้ผู้ป่วยโรคเรื้อรัง</p>
-    </Card>
-  );
+  return <PrescriptionForm q={q} />;
 }

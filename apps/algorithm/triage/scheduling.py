@@ -19,12 +19,22 @@ def next_shift_start(shifts: list[Shift], department_id: str, now: datetime) -> 
     return min(upcoming, default=None)
 
 
-def pick_doctor(doctor_ids: list[str], waiting: list[WaitingQueue]) -> str | None:
-    """Doctor with the fewest WAITING patients, so workload stays even."""
+def pick_doctor(
+    doctor_ids: list[str],
+    waiting: list[WaitingQueue],
+    busy: set[str] | frozenset[str] = frozenset(),
+    upcoming: dict[str, int] | None = None,
+) -> str | None:
+    """Least-loaded doctor: waiting patients + the patient in the room + appointments due within the hour.
+
+    Counting the patient in the room matters: with waiting patients only, two doctors with empty
+    queues tie and the busy one may be picked while the other sits idle (found in the simulation).
+    """
     if not doctor_ids:
         return None
     load = Counter(q.doctor_id for q in waiting)
-    return min(doctor_ids, key=lambda d: (load[d], d))
+    upcoming = upcoming or {}
+    return min(doctor_ids, key=lambda d: (load[d] + (d in busy) + upcoming.get(d, 0), d))
 
 
 def average_wait_minutes(waiting: list[WaitingQueue], department_id: str, now: datetime) -> float:

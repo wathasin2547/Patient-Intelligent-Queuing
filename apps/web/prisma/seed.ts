@@ -29,6 +29,7 @@ async function clearAll() {
   await prisma.refillSchedule.deleteMany();
   await prisma.prescription.deleteMany();
   await prisma.queue.deleteMany();
+  await prisma.appointment.deleteMany();
   await prisma.screening.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.shift.deleteMany();
@@ -45,13 +46,15 @@ async function main() {
   }
   const adminPassword = requireEnv("SEED_ADMIN_PASSWORD");
   const staffPassword = requireEnv("SEED_STAFF_PASSWORD");
+  const doctorPassword = process.env.SEED_DOCTOR_PASSWORD || staffPassword;
 
   await clearAll();
 
   const deptId = {} as Record<DeptKey, string>;
   for (const d of departments) {
     const created = await prisma.department.create({
-      data: { name: d.name, scopeOfCare: d.scopeOfCare },
+      // code is the queue-number prefix ("MED-001") used by lib/triage/save.ts
+      data: { name: d.name, code: d.key, scopeOfCare: d.scopeOfCare },
     });
     deptId[d.key] = created.id;
   }
@@ -92,10 +95,12 @@ async function main() {
   const now = new Date();
   // "today" in Bangkok
   const todayBkk = new Date(now.getTime() + BANGKOK_OFFSET_HOURS * 3600_000);
+  let firstMedDoctorId: string | null = null; // gets the doc.med1 login (UC09)
   for (const doc of doctors) {
     const created = await prisma.doctor.create({
       data: { name: doc.name, departmentId: deptId[doc.dept] },
     });
+    if (doc.dept === "MED" && !firstMedDoctorId) firstMedDoctorId = created.id;
     const shifts = [];
     for (let i = 0; i < SHIFT_DAYS; i++) {
       const y = todayBkk.getUTCFullYear();
@@ -124,12 +129,27 @@ async function main() {
         role: "STAFF",
         departmentId: deptId.MED,
       },
+      {
+        username: "doc.med1",
+        passwordHash: await bcrypt.hash(doctorPassword, 10),
+        role: "DOCTOR",
+        departmentId: deptId.MED,
+        doctorId: firstMedDoctorId,
+      },
+      {
+        // suspended by the admin: the login page must say so (UC02 alternative flow)
+        username: "staff.old",
+        passwordHash: await bcrypt.hash(staffPassword, 10),
+        role: "STAFF",
+        departmentId: deptId.ENT,
+        isActive: false,
+      },
     ],
   });
 
   console.log(
     `Seeded ${departments.length} departments, ${symptomCodes.length} symptom codes, ` +
-      `${questions.length} questions, ${doctors.length} doctors (${SHIFT_DAYS} days of shifts), 2 users`,
+      `${questions.length} questions, ${doctors.length} doctors (${SHIFT_DAYS} days of shifts), 4 users (admin, staff.med, doc.med1, staff.old suspended)`,
   );
 }
 

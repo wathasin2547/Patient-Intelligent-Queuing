@@ -26,7 +26,7 @@ export function LevelChip({ level, short }: { level: Level; short?: boolean }) {
 
 export const QUEUE_STATUS: Record<QueueStatus, { label: string; cls: string }> = {
   WAITING: { label: "รอเรียก", cls: "bg-subtle text-ink-2" },
-  CALLED: { label: "เรียกแล้ว", cls: "bg-lime text-lime-ink" },
+  CALLED: { label: "เรียกแล้ว", cls: "bg-accent text-accent-ink" },
   IN_PROGRESS: { label: "กำลังตรวจ", cls: "bg-ink text-white" },
   DONE: { label: "ตรวจเสร็จ", cls: "bg-emerald-50 text-emerald-700" },
   NO_SHOW: { label: "ไม่มา", cls: "bg-rose-50 text-rose-700" },
@@ -40,19 +40,19 @@ export function StatusChip({ status }: { status: QueueStatus }) {
 
 export const APPOINTMENT_STATUS: Record<AppointmentStatus, { label: string; cls: string }> = {
   SCHEDULED: { label: "รอมาตามนัด", cls: "bg-subtle text-ink-2" },
-  ARRIVED: { label: "มาถึงแล้ว", cls: "bg-lime text-lime-ink" },
+  ARRIVED: { label: "มาถึงแล้ว", cls: "bg-accent text-accent-ink" },
   CANCELLED: { label: "ยกเลิกนัด", cls: "bg-subtle text-ink-3 line-through" },
   MISSED: { label: "ไม่มาตามนัด", cls: "bg-rose-50 text-rose-700" },
 };
 
-type Tone = "neutral" | "lime" | "ink" | "rose" | "amber" | "sky";
+type Tone = "neutral" | "accent" | "ink" | "rose" | "amber" | "sky";
 const TONE: Record<Tone, string> = {
   neutral: "bg-subtle text-ink-2",
-  lime: "bg-lime text-lime-ink",
+  accent: "bg-accent text-accent-ink",
   ink: "bg-ink text-white",
   rose: "bg-rose-50 text-rose-700",
   amber: "bg-amber-50 text-amber-800",
-  sky: "bg-sky-50 text-sky-800",
+  sky: "bg-ocean-100 text-ocean-950",
 };
 
 export function Tag({ children, tone = "neutral" }: { children: React.ReactNode; tone?: Tone }) {
@@ -68,7 +68,7 @@ export function Card({
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {Icon && (
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle text-ink">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ocean-100 text-ocean-950">
                 <Icon size={17} strokeWidth={1.8} />
               </span>
             )}
@@ -97,15 +97,17 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
   );
 }
 
-/** Pill tabs: the active one is solid ink. */
+/** Pill tabs: the active one is solid navy, the others turn light blue on hover. */
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5" role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
+          role="tab"
+          aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`rounded-full px-4 py-2 text-sm transition ${value === o.value ? "bg-ink text-white" : "bg-surface text-ink-2 ring-1 ring-line hover:text-ink"}`}
+          className={`min-h-10 rounded-full px-4 py-2 text-sm transition ${value === o.value ? "bg-ink font-medium text-white shadow-card" : "bg-surface text-ink-2 ring-1 ring-line hover:bg-subtle hover:text-ink hover:ring-primary/40"}`}
         >
           {o.label}
         </button>
@@ -132,31 +134,36 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-const BTN = "inline-flex items-center justify-center gap-2 rounded-full text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40";
+// Hover darkens/fills, press nudges down 1px; disabled is visibly flat. Min height 40px for touch.
+const BTN = "inline-flex min-h-10 items-center justify-center gap-2 rounded-full text-sm font-medium transition active:translate-y-px disabled:pointer-events-none disabled:opacity-45";
 export const btn = {
-  primary: `${BTN} bg-ink px-5 py-2.5 text-white hover:bg-black`,
-  accent: `${BTN} bg-lime px-5 py-2.5 text-lime-ink hover:bg-lime-strong`,
-  secondary: `${BTN} bg-surface px-5 py-2.5 text-ink ring-1 ring-line hover:bg-subtle`,
-  danger: `${BTN} bg-surface px-5 py-2.5 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50`,
-  small: `${BTN} px-3.5 py-1.5 text-xs`,
-  icon: "inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line transition hover:text-ink",
-  link: "text-sm font-medium text-ink underline decoration-line underline-offset-4 hover:decoration-ink",
+  // main action: yellow with dark text — stands out against the blue brand and the neutral page
+  primary: `${BTN} bg-cta px-5 py-2.5 font-semibold text-ink ring-1 ring-cta-edge shadow-[0_6px_16px_-8px_rgba(217,154,0,0.9)] hover:bg-cta-strong hover:shadow-[0_8px_22px_-8px_rgba(217,154,0,1)]`,
+  // blue brand button (login)
+  brand: `${BTN} bg-primary px-5 py-2.5 text-white shadow-[0_6px_16px_-8px_rgba(0,119,182,0.7)] hover:bg-primary-strong hover:shadow-[0_8px_20px_-8px_rgba(2,62,138,0.8)]`,
+  accent: `${BTN} bg-accent px-5 py-2.5 text-accent-ink hover:bg-accent-strong`,
+  secondary: `${BTN} bg-surface px-5 py-2.5 text-ink ring-1 ring-ink/25 hover:bg-subtle hover:ring-ink/60`,
+  danger: `${BTN} bg-surface px-5 py-2.5 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50 hover:ring-rose-300`,
+  small: `${BTN} min-h-8 px-3.5 py-1.5 text-xs`,
+  primarySmall: `${BTN} min-h-8 bg-cta px-3.5 py-1.5 text-xs font-semibold text-ink ring-1 ring-cta-edge hover:bg-cta-strong`,
+  icon: "inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line transition hover:bg-subtle hover:text-primary-strong hover:ring-primary/50",
+  link: "text-sm font-medium text-primary-strong underline decoration-ocean-300 decoration-2 underline-offset-4 hover:text-ink hover:decoration-primary",
 };
 
-export function Notice({ tone = "neutral", children }: { tone?: "neutral" | "lime" | "rose" | "amber" | "sky"; children: React.ReactNode }) {
+export function Notice({ tone = "neutral", children }: { tone?: "neutral" | "accent" | "rose" | "amber" | "sky"; children: React.ReactNode }) {
   const cls = {
-    neutral: "bg-subtle text-ink-2",
-    lime: "bg-lime/60 text-lime-ink",
-    rose: "bg-rose-50 text-rose-800",
-    amber: "bg-amber-50 text-amber-900",
-    sky: "bg-sky-50 text-sky-900",
+    neutral: "bg-subtle text-ink-2 border-line",
+    accent: "bg-ocean-100 text-accent-ink border-ocean-300",
+    rose: "bg-rose-50 text-rose-800 border-rose-200",
+    amber: "bg-amber-50 text-amber-900 border-amber-200",
+    sky: "bg-ocean-100 text-ocean-950 border-ocean-300",
   }[tone];
-  return <div className={`rounded-2xl px-4 py-3 text-sm ${cls}`}>{children}</div>;
+  return <div className={`rounded-xl border-l-4 px-4 py-3 text-sm ${cls}`}>{children}</div>;
 }
 
 export function Avatar({ text, dark }: { text: string; dark?: boolean }) {
   return (
-    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${dark ? "bg-ink text-white" : "bg-subtle text-ink"}`}>
+    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${dark ? "bg-ink text-white" : "bg-ocean-100 text-ocean-950"}`}>
       {text}
     </span>
   );
@@ -169,13 +176,13 @@ export function doctorInitials(name: string, deptCode?: string) {
 
 export function MockBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-lime px-3 py-1 text-[11px] font-medium text-lime-ink" title="ยังไม่เชื่อมฐานข้อมูล ข้อมูลเก็บไว้ในเบราว์เซอร์นี้เท่านั้น">
-      <span className="h-1.5 w-1.5 rounded-full bg-lime-ink" />
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-[11px] font-medium text-accent-ink" title="ยังไม่เชื่อมฐานข้อมูล ข้อมูลเก็บไว้ในเบราว์เซอร์นี้เท่านั้น">
+      <span className="h-1.5 w-1.5 rounded-full bg-accent-ink" />
       ข้อมูลสมมติ
     </span>
   );
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">{children}</div>;
+  return <div className="rounded-xl border border-dashed border-line bg-canvas/60 px-4 py-6 text-center text-sm text-ink-3">{children}</div>;
 }

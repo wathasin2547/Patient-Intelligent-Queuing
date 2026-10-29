@@ -21,8 +21,10 @@ model Patient {
   address        String?
   createdAt      DateTime @default(now())
 
-  screenings Screening[]
-  refills    RefillSchedule[]
+  screenings   Screening[]
+  refills      RefillSchedule[]
+  queues       Queue[]
+  appointments Appointment[]
 }
 
 model SymptomCode {
@@ -64,28 +66,47 @@ model Screening {
   createdAt          DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id])
-  queue   Queue?
+  queues  Queue[] // more than one when the patient is referred on the same day
 }
 
 model Department {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  name        String  @unique
-  code        String?  
-  scopeOfCare String?
-  isActive    Boolean @default(true)
+  id                    String  @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String  @unique
+  code                  String?
+  scopeOfCare           String?
+  defaultServiceMinutes Int     @default(10) // ETA fallback until the doctor has finished cases today
+  isActive              Boolean @default(true)
 
   doctors Doctor[]
   queues  Queue[]
 }
 
 model Doctor {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
   name         String
-  departmentId String @db.ObjectId
+  departmentId String  @db.ObjectId
+  meetingUrl   String? // fixed room on an external video service for online visits
 
-  department Department @relation(fields: [departmentId], references: [id])
-  shifts     Shift[]
-  queues     Queue[]
+  department   Department    @relation(fields: [departmentId], references: [id])
+  shifts       Shift[]
+  queues       Queue[]
+  appointments Appointment[]
+}
+
+// Appointment queues recorded by staff (UC11); patients cannot book by themselves
+model Appointment {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String   @db.ObjectId
+  doctorId        String   @db.ObjectId
+  appointmentTime DateTime
+  reason          String
+  status          String   @default("SCHEDULED") // SCHEDULED | ARRIVED | CANCELLED | MISSED
+  createdBy       String   @db.ObjectId // User who recorded it
+  createdAt       DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  queues  Queue[]
 }
 
 model Shift {
@@ -100,21 +121,26 @@ model Shift {
 }
 
 model Queue {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  screeningId   String    @unique @db.ObjectId
-  departmentId  String    @db.ObjectId
-  doctorId      String?   @db.ObjectId
-  queueNumber   String // "MED-014"
-  visitType     String // "ONSITE" | "ONLINE"
-  priorityLevel Int // copied from screening (staff may edit)
-  status        String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
-  checkInTime   DateTime  @default(now())
-  calledTime    DateTime?
-  finishedTime  DateTime?
-  editedBy      String?   @db.ObjectId
-  editedAt      DateTime?
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  patientId           String    @db.ObjectId // read by the algorithm service (one call at a time per patient)
+  screeningId         String    @db.ObjectId // not unique: a same-day referral reuses the screening
+  appointmentId       String?   @db.ObjectId // set when the queue comes from a checked-in appointment
+  departmentId        String    @db.ObjectId
+  doctorId            String?   @db.ObjectId
+  queueNumber         String // "MED-014"
+  visitType           String // "ONSITE" | "ONLINE"
+  priorityLevel       Int // copied from screening (staff may edit)
+  status              String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
+  checkInTime         DateTime  @default(now())
+  calledTime          DateTime?
+  finishedTime        DateTime?
+  editedBy            String?   @db.ObjectId
+  editedAt            DateTime?
+  referredFromQueueId String?   @db.ObjectId // same-day referral from another department
 
+  patient      Patient       @relation(fields: [patientId], references: [id])
   screening    Screening     @relation(fields: [screeningId], references: [id])
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
   department   Department    @relation(fields: [departmentId], references: [id])
   doctor       Doctor?       @relation(fields: [doctorId], references: [id])
   prescription Prescription?
@@ -159,7 +185,18 @@ model User {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
   username     String  @unique
   passwordHash String
-  role         String // STAFF | ADMIN
+  role         String // STAFF | ADMIN | DOCTOR
   departmentId String? @db.ObjectId
+  doctorId     String? @db.ObjectId // DOCTOR accounts only
   isActive     Boolean @default(true)
+}
+
+// Admin-editable system settings (single document), kept out of code like the screening criteria
+model SystemSetting {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  maxActiveQueues     Int      @default(3) // queues one patient may hold at once, one per department
+  // D_j in P = B[L] + alpha * (W + D): head start in minutes for patients at higher risk while waiting
+  ageBonusMinutes     Int      @default(30)
+  chronicBonusMinutes Int      @default(15)
+  priorityAgeGroups   String[] @default(["60+"]) // Patient.ageGroup values that get ageBonusMinutes
 }

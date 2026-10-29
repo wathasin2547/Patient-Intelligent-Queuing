@@ -4,11 +4,11 @@
 // weights, red flags, onsite-only codes and the question set are all editable.
 // Records that may already be referenced are deactivated, not deleted.
 
-import { Building2, KeyRound, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
+import { Building2, HeartPulse, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
-import { saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
-import { newId } from "@/lib/mock/logic";
+import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
+import { maxSafeBonusMinutes, newId } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import type { Level, Question, Role, SymptomCode } from "@/lib/mock/types";
 
@@ -48,7 +48,7 @@ export default function MasterPage() {
 
 const LAYOUT = "grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]";
 const TH = "pb-3 text-left text-xs font-normal text-ink-3";
-const TR = "border-t border-subtle";
+const TR = "border-t border-line/70 transition hover:bg-subtle/60";
 
 function ActiveToggle({ active, onChange }: { active: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -64,7 +64,7 @@ function ActiveToggle({ active, onChange }: { active: boolean; onChange: (v: boo
 function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
   return (
     <label className="flex cursor-pointer items-start gap-2.5 rounded-2xl bg-subtle px-4 py-3 text-sm">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#151613]" />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 accent-ink" />
       <span>{children}</span>
     </label>
   );
@@ -81,7 +81,7 @@ function Departments() {
     const code = form.code.trim().toUpperCase();
     if (!/^[A-Z]{2,5}$/.test(code) || !form.name.trim()) return setErr("รหัสแผนกต้องเป็นตัวอักษรภาษาอังกฤษ 2–5 ตัว และต้องมีชื่อแผนก");
     if (state.departments.some((d) => d.code === code || d.name === form.name.trim())) return setErr("รหัสหรือชื่อแผนกซ้ำกับที่มีอยู่");
-    update((s) => saveDepartment(s, { id: `dept_${code}`, code, name: form.name.trim(), scopeOfCare: form.scopeOfCare.trim(), isActive: true }));
+    update((s) => saveDepartment(s, { id: `dept_${code}`, code, name: form.name.trim(), scopeOfCare: form.scopeOfCare.trim(), defaultServiceMinutes: 10, isActive: true }));
     setForm({ code: "", name: "", scopeOfCare: "" });
     setErr(null);
   }
@@ -91,13 +91,16 @@ function Departments() {
       <Card title="แผนก" icon={Building2} note="แผนกเวชปฏิบัติทั่วไปรับผู้ป่วยที่ไม่มีแผนกใดได้คะแนน ควรเปิดใช้งานไว้เสมอ">
         <div className="-mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
           <table className="w-full min-w-[560px] text-sm">
-            <thead><tr><th className={TH}>รหัส</th><th className={TH}>ชื่อ</th><th className={TH}>ขอบเขตการรักษา</th><th className={`${TH} text-right`}>สถานะ</th></tr></thead>
+            <thead><tr><th className={TH}>รหัส</th><th className={TH}>ชื่อ</th><th className={TH}>ขอบเขตการรักษา</th><th className={TH} title="ใช้ประมาณเวลาที่จะถึงคิวจนกว่าแพทย์จะตรวจเสร็จวันนี้ครบ 3 ราย">นาที/ราย</th><th className={`${TH} text-right`}>สถานะ</th></tr></thead>
             <tbody>
               {state.departments.map((d) => (
                 <tr key={d.id} className={TR}>
                   <td className="py-3"><span className="rounded-full bg-subtle px-2.5 py-1 font-mono text-xs">{d.code}</span></td>
                   <td className="py-3 font-medium">{d.name}</td>
                   <td className="py-3 pr-4 text-ink-2">{d.scopeOfCare}</td>
+                  <td className="py-3 pr-4">
+                    <input inputMode="numeric" value={d.defaultServiceMinutes} onChange={(e) => update((s) => saveDepartment(s, { ...d, defaultServiceMinutes: Number(e.target.value.replace(/\D/g, "")) || 1 }))} className="input w-16 py-1.5 text-center text-sm" />
+                  </td>
                   <td className="py-3 text-right"><ActiveToggle active={d.isActive} onChange={(v) => update((s) => saveDepartment(s, { ...d, isActive: v }))} /></td>
                 </tr>
               ))}
@@ -114,7 +117,59 @@ function Departments() {
           {err && <Notice tone="rose">{err}</Notice>}
         </div>
       </Card>
+      <Card title="คิวหลายแผนก" icon={Layers} className="xl:col-start-2">
+        <Field label="ผู้ป่วย 1 คนถือคิวพร้อมกันได้สูงสุด (แผนกละ 1 คิว)">
+          <select value={state.settings.maxActiveQueues} onChange={(e) => update((s) => ({ ...s, settings: { ...s.settings, maxActiveQueues: Number(e.target.value) } }))} className="input">
+            {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} คิว</option>)}
+          </select>
+        </Field>
+        <p className="mt-3 text-xs text-ink-3">ระบบเรียกผู้ป่วยได้ทีละคิว ถ้ากำลังตรวจอยู่อีกแผนก ระบบเก็บลำดับไว้และเรียกคนถัดไปแทน</p>
+      </Card>
+      <RiskSettings />
     </div>
+  );
+}
+
+// ── queue risk factors (D in P = B + α(W + D)) ──
+
+const AGE_GROUPS = ["0-5", "6-17", "18-59", "60+"];
+const BONUS_CHOICES = [0, 5, 10, 15, 20, 25, 30, 40];
+
+function RiskSettings() {
+  const { state, update } = useMock();
+  const st = state.settings;
+  const limit = maxSafeBonusMinutes();
+  // a choice is offered only if age + chronic stays below the narrowest level gap
+  const allowed = (n: number, other: number) => n + other < limit;
+  const set = (patch: Partial<typeof st>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+  const toggleAge = (g: string) =>
+    set({ priorityAgeGroups: st.priorityAgeGroups.includes(g) ? st.priorityAgeGroups.filter((x) => x !== g) : [...st.priorityAgeGroups, g] });
+  return (
+    <Card title="ปัจจัยเสี่ยงในการจัดคิว" icon={HeartPulse} className="xl:col-start-2">
+      <div className="flex flex-col gap-3">
+        <Field label="ช่วงอายุที่ได้คิวก่อน">
+          <div className="flex flex-wrap gap-3 text-sm">
+            {AGE_GROUPS.map((g) => (
+              <label key={g} className="flex items-center gap-1.5">
+                <input type="checkbox" checked={st.priorityAgeGroups.includes(g)} onChange={() => toggleAge(g)} />
+                {g} ปี
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="แต้มต่อของช่วงอายุข้างต้น (นาที)">
+          <select value={st.ageBonusMinutes} onChange={(e) => set({ ageBonusMinutes: Number(e.target.value) })} className="input">
+            {BONUS_CHOICES.map((n) => <option key={n} value={n} disabled={!allowed(n, st.chronicBonusMinutes)}>{n} นาที</option>)}
+          </select>
+        </Field>
+        <Field label="แต้มต่อของผู้มีโรคประจำตัว (นาที)">
+          <select value={st.chronicBonusMinutes} onChange={(e) => set({ chronicBonusMinutes: Number(e.target.value) })} className="input">
+            {BONUS_CHOICES.map((n) => <option key={n} value={n} disabled={!allowed(n, st.ageBonusMinutes)}>{n} นาที</option>)}
+          </select>
+        </Field>
+      </div>
+      <p className="mt-3 text-xs text-ink-3">ผู้ป่วยกลุ่มนี้นับเวลารอเหมือนรอมาก่อนแล้วตามจำนวนนาทีที่ตั้ง ใช้จัดลำดับภายในระดับความเร่งด่วนเดียวกันเท่านั้น แต้มต่อรวมต้องน้อยกว่า {limit} นาที เพื่อไม่ให้ผู้ป่วยข้ามระดับ</p>
+    </Card>
   );
 }
 
@@ -123,15 +178,18 @@ function Departments() {
 function Doctors() {
   const { state, update } = useMock();
   const { dept } = useLookups();
-  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "" });
+  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "", meetingUrl: "" });
   return (
     <div className={LAYOUT}>
-      <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย">
+      <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย · ลิงก์ห้องตรวจออนไลน์ส่งให้ผู้ป่วยตรวจออนไลน์เมื่อถึงคิว">
         <ul className="flex flex-col gap-2">
           {state.doctors.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5">
+            <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2">
               <Avatar text={doctorInitials(d.name, dept.get(d.departmentId)?.code)} dark />
-              <span className="min-w-0 flex-1 truncate font-medium">{d.name}</span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{d.name}</div>
+                <MeetingUrlInput key={d.meetingUrl ?? ""} value={d.meetingUrl} onSave={(v) => update((s) => saveDoctor(s, { ...d, meetingUrl: v }))} />
+              </div>
               <PillSelect value={d.departmentId} onChange={(v) => update((s) => saveDoctor(s, { ...d, departmentId: v }))} className="w-48">
                 {state.departments.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </PillSelect>
@@ -147,11 +205,14 @@ function Doctors() {
               {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
+          <Field label="ลิงก์ห้องตรวจออนไลน์" hint="ห้องประจำของแพทย์บนบริการวิดีโอคอลภายนอก เว้นว่างได้">
+            <input value={form.meetingUrl} onChange={(e) => setForm((f) => ({ ...f, meetingUrl: e.target.value }))} className="input" placeholder="https://" />
+          </Field>
           <button
             disabled={!form.name.trim()}
             onClick={() => {
-              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId }));
-              setForm((f) => ({ ...f, name: "" }));
+              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId, meetingUrl: form.meetingUrl.trim() || null }));
+              setForm((f) => ({ ...f, name: "", meetingUrl: "" }));
             }}
             className={`${btn.primary} mt-1`}
           >
@@ -160,6 +221,20 @@ function Doctors() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** Saved on blur so typing a link does not rewrite the store on every key. */
+function MeetingUrlInput({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
+  const [text, setText] = useState(value ?? "");
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => text.trim() !== (value ?? "") && onSave(text.trim() || null)}
+      placeholder="ลิงก์ห้องตรวจออนไลน์ (ยังไม่ได้ตั้ง)"
+      className="mt-0.5 w-full truncate bg-transparent text-xs text-ink-3 outline-none placeholder:text-ink-3/60 focus:text-ink"
+    />
   );
 }
 
@@ -314,7 +389,7 @@ function Questions() {
       <Card title="ชุดคำถามซักประวัติ" icon={ListChecks} note="แชทบอทถามตามลำดับ และข้ามข้อที่เงื่อนไขไม่ตรง">
         <ol className="flex flex-col gap-2">
           {list.map((q) => (
-            <li key={q.id} className={`flex gap-4 rounded-2xl px-4 py-3.5 ${editing?.id === q.id ? "bg-lime/50" : "bg-subtle"} ${q.isActive ? "" : "opacity-40"}`}>
+            <li key={q.id} className={`flex gap-4 rounded-2xl px-4 py-3.5 ${editing?.id === q.id ? "bg-accent/50" : "bg-subtle"} ${q.isActive ? "" : "opacity-40"}`}>
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums">{q.order}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -381,21 +456,29 @@ function Questions() {
 
 // ── users ──
 
+const EMPTY_USER = { username: "", password: "", role: "STAFF" as Role, departmentId: "", doctorId: "" };
+
 function Users() {
   const { state, update } = useMock();
-  const { dept } = useLookups();
-  const [form, setForm] = useState<{ username: string; password: string; role: Role; departmentId: string }>({ username: "", password: "", role: "STAFF", departmentId: "" });
+  const { dept, doctor: doctorMap } = useLookups();
+  const [form, setForm] = useState(EMPTY_USER);
   const [err, setErr] = useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+  const linked = new Set(state.users.map((u) => u.doctorId).filter(Boolean));
+  const freeDoctors = state.doctors.filter((d) => !linked.has(d.id));
 
   function add() {
     const username = form.username.trim();
     if (!/^[a-z0-9._]{3,}$/.test(username)) return setErr("ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษตัวเล็ก ตัวเลข . หรือ _ อย่างน้อย 3 ตัว");
     if (state.users.some((u) => u.username === username)) return setErr("ชื่อผู้ใช้นี้มีอยู่แล้ว");
     if (form.password.length < 8) return setErr("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+    const isDoctor = form.role === "DOCTOR";
+    if (isDoctor && !form.doctorId) return setErr("บัญชีแพทย์ต้องเลือกรายชื่อแพทย์ที่ใช้บัญชีนี้");
+    // a doctor account belongs to the doctor's own department
+    const departmentId = isDoctor ? doctorMap.get(form.doctorId)!.departmentId : form.departmentId || null;
     // Mock: the password is not stored. The real API hashes it with bcrypt before saving.
-    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId: form.departmentId || null, isActive: true }));
-    setForm({ username: "", password: "", role: "STAFF", departmentId: "" });
+    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId, doctorId: isDoctor ? form.doctorId : null, isActive: true }));
+    setForm(EMPTY_USER);
     setErr(null);
   }
 
@@ -404,13 +487,15 @@ function Users() {
       <Card title="บัญชีบุคลากร" icon={KeyRound} note="บุคลากรสมัครเองไม่ได้ · บัญชีที่ปิดใช้งานจะเข้าสู่ระบบไม่ได้">
         <ul className="flex flex-col gap-2">
           {state.users.map((u) => (
-            <li key={u.id} className={`flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 ${u.isActive ? "" : "opacity-50"}`}>
+            <li key={u.id} className={`flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2 ${u.isActive ? "" : "opacity-50"}`}>
               <Avatar text={u.username.slice(0, 2).toUpperCase()} dark={u.role === "ADMIN"} />
               <div className="min-w-0 flex-1">
                 <div className="font-mono text-sm">{u.username}</div>
-                <div className="text-xs text-ink-3">{u.role === "ADMIN" ? "ผู้ดูแลระบบ" : "เจ้าหน้าที่"} · {u.departmentId ? dept.get(u.departmentId)?.name : "ทุกแผนก"}</div>
+                <div className="text-xs text-ink-3">
+                  {ROLE_LABEL[u.role]} · {u.doctorId ? doctorMap.get(u.doctorId)?.name : u.departmentId ? dept.get(u.departmentId)?.name : "ทุกแผนก"}
+                </div>
               </div>
-              {u.id === state.sessionUserId ? <Tag tone="lime">บัญชีของคุณ</Tag> : <ActiveToggle active={u.isActive} onChange={(v) => update((s) => saveUser(s, { ...u, isActive: v }))} />}
+              {u.id === state.sessionUserId ? <Tag tone="accent">บัญชีของคุณ</Tag> : <ActiveToggle active={u.isActive} onChange={(v) => update((s) => saveUser(s, { ...u, isActive: v }))} />}
             </li>
           ))}
         </ul>
@@ -422,17 +507,26 @@ function Users() {
           <div className="grid grid-cols-2 gap-2">
             <Field label="บทบาท">
               <select value={form.role} onChange={(e) => set({ role: e.target.value as Role })} className="input">
-                <option value="STAFF">เจ้าหน้าที่</option>
-                <option value="ADMIN">ผู้ดูแลระบบ</option>
+                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
             </Field>
-            <Field label="แผนก">
-              <select value={form.departmentId} onChange={(e) => set({ departmentId: e.target.value })} className="input">
-                <option value="">ทุกแผนก</option>
-                {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </Field>
+            {form.role === "DOCTOR" ? (
+              <Field label="แพทย์">
+                <select value={form.doctorId} onChange={(e) => set({ doctorId: e.target.value })} className="input">
+                  <option value="">เลือกแพทย์</option>
+                  {freeDoctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </Field>
+            ) : (
+              <Field label="แผนก">
+                <select value={form.departmentId} onChange={(e) => set({ departmentId: e.target.value })} className="input">
+                  <option value="">ทุกแผนก</option>
+                  {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </Field>
+            )}
           </div>
+          {form.role === "DOCTOR" && <p className="text-xs text-ink-3">แพทย์เห็นเฉพาะคิวของตนเองและบันทึกผลการตรวจ (UC09) · แพทย์ 1 คนมีได้ 1 บัญชี</p>}
           <button onClick={add} className={`${btn.primary} mt-1`}>สร้างบัญชี</button>
           {err && <Notice tone="rose">{err}</Notice>}
         </div>

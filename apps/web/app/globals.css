@@ -1,18 +1,53 @@
 @import "tailwindcss";
 
-/* Design tokens — soft neutral canvas, white cards, ink for primary actions, lime as the one accent. */
+/* Design tokens — "Ocean Breeze" palette (#03045E #0077B6 #00B4D8 #90E0EF #CAF0F8).
+   Minimal / Swiss style from the ui-ux-pro-max skill: white cards on a pale-blue canvas,
+   navy text, one blue for primary actions, light cyan as the highlight.
+   Every text pair below is WCAG AA (>= 4.5:1); light cyan is never used for text on white. */
 @theme {
-  --color-canvas: #eff0ec;
+  --color-ocean-950: #03045e;
+  --color-ocean-800: #023e8a;
+  --color-ocean-700: #0077b6;
+  --color-ocean-500: #00b4d8;
+  --color-ocean-300: #90e0ef;
+  --color-ocean-100: #caf0f8;
+
+  /* Neutrals are plain slate (not blue-tinted) so blue stays a brand colour, not the whole page. */
+  --color-canvas: #f4f6f9;
   --color-surface: #ffffff;
-  --color-subtle: #f5f6f2;
-  --color-line: #e5e6e0;
-  --color-ink: #151613;
-  --color-ink-2: #5a5c55;
-  --color-ink-3: #8e9088;
-  --color-lime: #d9f36e;
-  --color-lime-strong: #bfe03b;
-  --color-lime-ink: #2b3606;
-  --radius-card: 1.75rem;
+  --color-subtle: #eef1f5;
+  --color-subtle-2: #e2e7ee; /* hover of subtle */
+  --color-line: #d3dae3;
+  --color-ink: #0f172a; /* text + dark chips — 16.5:1 on canvas */
+  --color-ink-2: #334155; /* body text — 9:1 on subtle */
+  --color-ink-3: #4b5a70; /* meta text — >= 5.6:1 on every light surface */
+
+  --color-brand: #03045e; /* sidebar, logo, login panel, patient hero cards */
+  /* Main action = warm yellow, the complement of the blue brand (same "go" colour as the call board).
+     Dark text on it 11.4:1; the darker edge keeps the button outlined on white. */
+  --color-cta: #ffc72c;
+  --color-cta-strong: #f2b300;
+  --color-cta-edge: #d99a00;
+  /* Decorative pills on the navy login panel — each a different hue from the yellow logo.
+     Navy icon on coral 7.7:1, on mint 12:1. */
+  --color-coral: #ff8a65;
+  --color-mint: #5eead4;
+
+  --color-primary: #0077b6; /* links, focus ring, info — 4.9:1 on white */
+  --color-primary-strong: #023e8a; /* hover / links on tinted backgrounds */
+  --color-accent: #90e0ef; /* highlight chips; navy text 11.9:1 */
+  --color-accent-strong: #00b4d8;
+  --color-accent-ink: #03045e;
+
+  /* Call board (/display) — read from across the waiting room. Yellow means "your turn":
+     14:1 on the board, navy text on yellow 12.6:1. */
+  --color-board: #01022e;
+  --color-board-card: #0b1552;
+  --color-call: #ffd60a;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 12px 32px -20px rgba(15, 23, 42, 0.25);
+  --shadow-raised: 0 2px 4px rgba(15, 23, 42, 0.08), 0 18px 40px -18px rgba(15, 23, 42, 0.32);
 }
 
 @theme inline {
@@ -24,20 +59,83 @@ body {
   color: var(--color-ink);
 }
 
+@layer base {
+  /* Tailwind v4 resets the pointer on buttons; every clickable thing should show it. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    cursor: pointer;
+  }
+
+  a,
+  button,
+  select,
+  input,
+  textarea,
+  summary {
+    transition-property: color, background-color, border-color, box-shadow, outline-color, transform, opacity;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* Keyboard focus: always visible, 4.9:1 against white. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-primary);
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 1ms !important;
+      animation-duration: 1ms !important;
+    }
+  }
+}
+
 @layer components {
   .card {
-    @apply rounded-card bg-surface p-5 shadow-[0_1px_2px_rgba(21,22,19,0.04),0_16px_40px_-24px_rgba(21,22,19,0.16)] sm:p-6;
+    @apply rounded-card border border-line/70 bg-surface p-5 shadow-card sm:p-6;
+  }
+  /* For cards that are links or buttons: lift + blue edge on hover. */
+  .card-hover {
+    @apply transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised;
   }
   .input {
-    @apply w-full rounded-2xl border border-transparent bg-subtle px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-3 focus:border-ink/25 focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60;
+    @apply w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-3 hover:border-primary/50 focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-subtle disabled:opacity-70;
   }
   select.input,
   select.pill {
     @apply cursor-pointer appearance-none bg-no-repeat pr-10;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a5c55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2352618a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-position: right 0.9rem center;
   }
   .pill {
-    @apply rounded-full bg-surface px-4 py-2 text-sm text-ink outline-none ring-1 ring-line transition focus:ring-ink/30;
+    @apply rounded-full bg-surface px-4 py-2 text-sm text-ink outline-none ring-1 ring-line transition hover:ring-primary/50 focus:ring-2 focus:ring-primary;
+  }
+  /* The five palette colours as a thin band — brand mark on login / landing. */
+  .ocean-band {
+    background: linear-gradient(
+      90deg,
+      var(--color-ocean-950) 0 20%,
+      var(--color-ocean-700) 20% 40%,
+      var(--color-ocean-500) 40% 60%,
+      var(--color-ocean-300) 60% 80%,
+      var(--color-ocean-100) 80% 100%
+    );
   }
 }

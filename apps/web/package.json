@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "check:queue": "tsx scripts/check-multi-queue.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -17,8 +18,10 @@
     "bcryptjs": "^3.0.3",
     "lucide-react": "1.36.0",
     "next": "16.3.7",
+    "next-auth": "5.0.0-beta.32",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

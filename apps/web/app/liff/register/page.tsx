@@ -76,7 +76,7 @@ function RegisterForm() {
         </Row>
         <label className="flex items-center justify-between gap-3 rounded-2xl bg-subtle px-4 py-3 text-sm">
           มีโรคประจำตัวที่ต้องรับยาต่อเนื่อง
-          <input type="checkbox" checked={form.isChronic} onChange={(e) => set({ isChronic: e.target.checked })} className="h-5 w-5 accent-[#151613]" />
+          <input type="checkbox" checked={form.isChronic} onChange={(e) => set({ isChronic: e.target.checked })} className="h-5 w-5 accent-ink" />
         </label>
         <Row label="ที่อยู่สำหรับจัดส่งยา (ไม่บังคับ)"><textarea value={form.address} onChange={(e) => set({ address: e.target.value })} className="input" rows={2} /></Row>
       </div>
@@ -85,7 +85,7 @@ function RegisterForm() {
         <label className="mt-3 flex gap-3 rounded-card bg-surface p-4 text-xs leading-relaxed text-ink-2">
           <ShieldCheck size={20} strokeWidth={1.8} className="shrink-0 text-ink" />
           <span className="flex-1">ยินยอมให้สถานพยาบาลเก็บและใช้ข้อมูลอาการเพื่อการคัดกรองและจัดคิว ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</span>
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="h-5 w-5 shrink-0 accent-[#151613]" />
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="h-5 w-5 shrink-0 accent-ink" />
         </label>
       )}
       {error && <div className="mt-3"><Notice tone="rose">{error}</Notice></div>}

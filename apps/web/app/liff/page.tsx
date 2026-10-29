@@ -3,7 +3,7 @@
 import { ArrowUpRight, CalendarCheck, MessageCircle, Pill, Ticket, UserRound, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { LEVEL } from "@/components/ui";
-import { ACTIVE, positionInLine } from "@/lib/mock/logic";
+import { ACTIVE, isCalledOrIn, positionInLine } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import { fmtShortDate, fmtTime } from "@/lib/mock/time";
 
@@ -16,17 +16,19 @@ export default function LiffHome() {
   if (!patient) {
     return (
       <div className="flex flex-1 flex-col justify-end gap-4 p-5">
-        <div className="rounded-card bg-ink p-6 text-white">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-lime text-ink"><UserRound size={22} strokeWidth={1.8} /></span>
+        <div className="rounded-card bg-brand p-6 text-white">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-ink"><UserRound size={22} strokeWidth={1.8} /></span>
           <h1 className="mt-5 text-2xl font-medium tracking-tight">ยินดีต้อนรับ</h1>
           <p className="mt-1 text-sm text-white/60">ใช้งานครั้งแรก กรุณาลงทะเบียนก่อนรับคิว ใช้เวลาประมาณ 1 นาที</p>
-          <Link href="/liff/register" className="mt-6 flex items-center justify-center rounded-full bg-lime py-3.5 font-medium text-ink">ลงทะเบียน</Link>
+          <Link href="/liff/register" className="mt-6 flex items-center justify-center rounded-full bg-accent py-3.5 font-medium text-ink">ลงทะเบียน</Link>
         </div>
       </div>
     );
   }
 
-  const active = state.queues.find((q) => q.patientId === patient.id && ACTIVE.includes(q.status));
+  const allActive = state.queues.filter((q) => q.patientId === patient.id && ACTIVE.includes(q.status));
+  // show the queue being served first; the rest are listed on the queue page
+  const active = allActive.find(isCalledOrIn) ?? allActive[0];
   const ahead = active ? Math.max(0, (positionInLine(state, active, now) ?? 1) - 1) : 0;
   const rxIds = new Set(state.queues.filter((q) => q.patientId === patient.id).map((q) => q.id));
   const pendingRx = state.prescriptions.filter((r) => rxIds.has(r.queueId) && !state.deliveries.some((d) => d.prescriptionId === r.id));
@@ -43,22 +45,23 @@ export default function LiffHome() {
       </div>
 
       {active && (
-        <Link href="/liff/queue" className="rounded-card bg-ink p-5 text-white">
+        <Link href="/liff/queue" className="rounded-card bg-brand p-5 text-white">
           <div className="flex items-center justify-between text-sm text-white/60">
             คิวของคุณวันนี้ <ArrowUpRight size={18} strokeWidth={1.8} />
           </div>
-          <div className="mt-3 font-mono text-5xl font-semibold tracking-tight text-lime">{active.queueNumber}</div>
+          <div className="mt-3 font-mono text-5xl font-semibold tracking-tight text-accent">{active.queueNumber}</div>
           <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
             <span className="rounded-full bg-white/10 px-2.5 py-1">{dept.get(active.departmentId)?.name}</span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1"><span className={`h-2 w-2 rounded-full ${LEVEL[active.priorityLevel].dot}`} /> {LEVEL[active.priorityLevel].name}</span>
             <span className="rounded-full bg-white/10 px-2.5 py-1">{active.status === "WAITING" ? `รออยู่ก่อนหน้า ${ahead} ราย` : active.status === "CALLED" ? "ถึงคิวแล้ว" : "กำลังตรวจ"}</span>
+            {allActive.length > 1 && <span className="rounded-full bg-accent px-2.5 py-1 text-accent-ink">อีก {allActive.length - 1} คิว</span>}
           </div>
         </Link>
       )}
 
       <div className="grid grid-cols-2 gap-3">
         <Tile href="/liff/chat" title="รับคิว" sub="ซักประวัติผ่านแชท" icon={MessageCircle} accent={!active} />
-        <Tile href="/liff/queue" title="สถานะคิว" sub={active ? active.queueNumber : "ยังไม่มีคิว"} icon={Ticket} />
+        <Tile href="/liff/queue" title="สถานะคิว" sub={allActive.length > 1 ? `${allActive.length} คิว` : active ? active.queueNumber : "ยังไม่มีคิว"} icon={Ticket} />
         <Tile href="/liff/medicine" title="รับยา" sub={pendingRx.length ? "รอเลือกวิธีรับยา" : "ไม่มีรายการ"} icon={Pill} badge={pendingRx.length || undefined} />
         <Tile href="/liff/register" title="ข้อมูลของฉัน" sub="แก้ไขข้อมูลพื้นฐาน" icon={UserRound} />
       </div>
@@ -100,13 +103,13 @@ export default function LiffHome() {
 
 function Tile({ href, title, sub, icon: Icon, badge, accent }: { href: string; title: string; sub: string; icon: LucideIcon; badge?: number; accent?: boolean }) {
   return (
-    <Link href={href} className={`relative flex flex-col rounded-card p-4 transition active:scale-[0.98] ${accent ? "bg-lime" : "bg-surface"}`}>
+    <Link href={href} className={`relative flex flex-col rounded-card p-4 transition active:scale-[0.98] ${accent ? "bg-accent" : "bg-surface"}`}>
       <div className="flex items-start justify-between">
-        <span className={`flex h-10 w-10 items-center justify-center rounded-full ${accent ? "bg-ink text-lime" : "bg-subtle text-ink"}`}><Icon size={18} strokeWidth={1.8} /></span>
+        <span className={`flex h-10 w-10 items-center justify-center rounded-full ${accent ? "bg-brand text-accent" : "bg-subtle text-ink"}`}><Icon size={18} strokeWidth={1.8} /></span>
         {badge ? <span className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-medium text-white">{badge}</span> : <ArrowUpRight size={16} strokeWidth={1.8} className="text-ink-3" />}
       </div>
       <div className="mt-6 font-medium">{title}</div>
-      <div className={`truncate text-xs ${accent ? "text-lime-ink/70" : "text-ink-3"}`}>{sub}</div>
+      <div className={`truncate text-xs ${accent ? "text-accent-ink/70" : "text-ink-3"}`}>{sub}</div>
     </Link>
   );
 }

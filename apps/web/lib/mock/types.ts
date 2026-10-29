@@ -2,14 +2,14 @@
 // (docs/thesis/images/er-diagram.png) so the mock store can later be swapped for
 // real API calls without renaming anything. All timestamps are ISO strings in UTC.
 
-export type Role = "STAFF" | "ADMIN";
+export type Role = "STAFF" | "ADMIN" | "DOCTOR";
 export type Level = 1 | 2 | 3 | 4 | 5;
 export type QueueStatus = "WAITING" | "CALLED" | "IN_PROGRESS" | "DONE" | "NO_SHOW" | "CANCELLED";
 export type AppointmentStatus = "SCHEDULED" | "ARRIVED" | "CANCELLED" | "MISSED";
 export type DeliveryMethod = "PICKUP" | "SHIP";
 export type DeliveryStatus = "PENDING" | "PREPARING" | "READY" | "SHIPPED" | "COMPLETED";
 
-// ── PostgreSQL side ──
+// ── Service data (MongoDB, relations declared in Prisma) ──
 
 export type Patient = {
   id: string;
@@ -28,10 +28,13 @@ export type Department = {
   code: string; // queue-number prefix, e.g. "MED" (not in the ER yet — see SPEC note)
   name: string;
   scopeOfCare: string;
+  /** fallback consultation length for the ETA until the doctor has finished cases today */
+  defaultServiceMinutes: number;
   isActive: boolean;
 };
 
-export type Doctor = { id: string; name: string; departmentId: string };
+// meetingUrl: the doctor's fixed room on an external video service, sent to online patients when called
+export type Doctor = { id: string; name: string; departmentId: string; meetingUrl: string | null };
 
 export type Shift = {
   id: string;
@@ -69,6 +72,8 @@ export type Queue = {
   finishedTime: string | null;
   editedBy: string | null;
   editedAt: string | null;
+  /** set when a doctor referred the patient here from another queue on the same day */
+  referredFromQueueId: string | null;
 };
 
 export type PrescriptionItem = { name: string; dosage: string; quantity: string };
@@ -104,10 +109,11 @@ export type User = {
   username: string;
   role: Role;
   departmentId: string | null;
+  doctorId: string | null; // set only for DOCTOR accounts: the doctor whose queue this login works
   isActive: boolean;
 };
 
-// ── MongoDB side ──
+// ── Screening knowledge base and results (MongoDB) ──
 
 export type QuestionOption = { label: string; symptomCode: string | null };
 
@@ -166,7 +172,8 @@ export type CallEvent = {
   id: string;
   queueId: string;
   doctorId: string;
-  kind: "CALL" | "NO_SHOW";
+  /** HOLD = the top patient was busy in another queue, so the doctor called the next one */
+  kind: "CALL" | "NO_SHOW" | "HOLD";
   at: string;
 };
 
@@ -191,4 +198,16 @@ export type MockState = {
   notifications: Notification[];
   callEvents: CallEvent[];
   acknowledgedRedFlags: string[]; // screening ids
+  settings: Settings;
+};
+
+/** System settings editable by the admin (UC12), never hardcoded. */
+export type Settings = {
+  /** how many queues one patient may hold at once, one per department */
+  maxActiveQueues: number;
+  /** D in P = B[L] + α(W + D): head start in minutes for patients at higher risk while waiting */
+  ageBonusMinutes: number;
+  chronicBonusMinutes: number;
+  /** Patient.ageGroup values that get ageBonusMinutes */
+  priorityAgeGroups: string[];
 };

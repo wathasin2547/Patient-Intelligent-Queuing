@@ -78,7 +78,7 @@ function RxCard({ rx }: { rx: Prescription }) {
               const Icon = m === "PICKUP" ? Hospital : Truck;
               return (
                 <button key={m} onClick={() => { setMethod(m); setError(null); }} className={`rounded-[22px] p-4 text-left transition ${on ? "bg-ink text-white" : "bg-subtle"}`}>
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-full ${on ? "bg-lime text-ink" : "bg-surface"}`}><Icon size={18} strokeWidth={1.8} /></span>
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-full ${on ? "bg-accent text-ink" : "bg-surface"}`}><Icon size={18} strokeWidth={1.8} /></span>
                   <div className="mt-4 text-sm font-medium">{m === "PICKUP" ? "รับที่โรงพยาบาล" : "จัดส่งถึงบ้าน"}</div>
                 </button>
               );
@@ -91,7 +91,7 @@ function RxCard({ rx }: { rx: Prescription }) {
             </label>
           )}
           {error && <div className="mt-3"><Notice tone="rose">{error}</Notice></div>}
-          <button disabled={!method} onClick={confirm} className="mt-4 w-full rounded-full bg-lime py-3.5 font-medium text-lime-ink disabled:bg-subtle disabled:text-ink-3">
+          <button disabled={!method} onClick={confirm} className="mt-4 w-full rounded-full bg-accent py-3.5 font-medium text-accent-ink disabled:bg-subtle disabled:text-ink-3">
             ยืนยัน
           </button>
         </>
@@ -108,7 +108,7 @@ function RxCard({ rx }: { rx: Prescription }) {
               return (
                 <li key={st} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${reached ? "bg-ink text-lime" : "bg-subtle text-ink-3"}`}>
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${reached ? "bg-brand text-accent" : "bg-subtle text-ink-3"}`}>
                       {reached ? <Check size={14} strokeWidth={2.4} /> : i + 1}
                     </span>
                     {i < all.length - 1 && <span className={`h-5 w-px ${reached ? "bg-ink" : "bg-line"}`} />}

@@ -12,7 +12,8 @@ import { useMock } from "@/lib/mock/store";
 
 const DEMO_USERS = [
   { id: "pt_14", label: "ผู้ป่วยทดสอบ 14 — มีคิวรออยู่" },
-  { id: "pt_01", label: "ผู้ป่วยทดสอบ 01 — มีนัด + มียารอเลือกวิธีรับ" },
+  { id: "pt_01", label: "ผู้ป่วยทดสอบ 01 — มี 2 คิว (MED นัด + ENT) + ยารอเลือก" },
+  { id: "pt_16", label: "ผู้ป่วยทดสอบ 16 — ตรวจออนไลน์" },
   { id: "", label: "ผู้ใช้ LINE ใหม่ — ยังไม่ลงทะเบียน" },
 ];
 
@@ -26,7 +27,7 @@ export default function LiffLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen flex-col items-center sm:py-6">
       <div className="flex w-full max-w-[420px] flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-0">
-        <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวม">
+        <Link href="/dev" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวมสำหรับผู้พัฒนา">
           <House size={16} strokeWidth={1.8} />
         </Link>
         <select
@@ -40,7 +41,7 @@ export default function LiffLayout({ children }: { children: React.ReactNode }) 
         <MockBadge />
       </div>
 
-      <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-ink sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(21,22,19,0.45)]">
+      <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-brand sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(3,4,94,0.45)]">
         <div className="flex min-h-[760px] flex-1 flex-col overflow-hidden bg-canvas sm:rounded-[36px]">
           <div className="flex items-center gap-2 bg-surface px-4 py-3.5">
             {pathname !== "/liff" ? (
