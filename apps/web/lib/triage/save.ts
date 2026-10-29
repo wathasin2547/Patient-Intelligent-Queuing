@@ -1,13 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ClosedAnswer, TriageResult } from "@/lib/triage/client";
-
-// เที่ยงคืนของวันนี้ตามเวลาไทย (ไว้เริ่มนับเลขคิวใหม่ทุกวัน)
-function startOfTodayBangkok(): Date {
-  const bkk = new Date(Date.now() + 7 * 3600_000);
-  bkk.setUTCHours(0, 0, 0, 0);
-  return new Date(bkk.getTime() - 7 * 3600_000);
-}
+import { issueQueueNumber } from "@/lib/db/queue-number";
 
 const ACTIVE = ["WAITING", "CALLED", "IN_PROGRESS"];
 
@@ -87,18 +81,8 @@ export async function saveScreening(
     return { screeningId: screening.id, queueNumber: null, blocked: { kind: "LIMIT", max } };
   }
 
-  // 6) ออกเลขคิว: รหัสแผนก + ลำดับของวันนี้ในแผนกนั้น
-  // TODO: count + 1 is not atomic; two patients finishing at the same moment can get the same number
-  const dept = await prisma.department.findUnique({
-    where: { id: r.assignedDepartment },
-  });
-  const countToday = await prisma.queue.count({
-    where: {
-      departmentId: r.assignedDepartment,
-      checkInTime: { gte: startOfTodayBangkok() },
-    },
-  });
-  const queueNumber = `${dept?.code ?? "Q"}-${String(countToday + 1).padStart(3, "0")}`;
+  // 6) ออกเลขคิว: ตัวนับแบบ atomic ดูที่ lib/db/queue-number.ts
+  const queueNumber = await issueQueueNumber(r.assignedDepartment);
 
   await prisma.queue.create({
     data: {

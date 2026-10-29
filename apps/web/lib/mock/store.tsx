@@ -12,6 +12,12 @@ import type { MockState } from "./types";
 
 const STORAGE_KEY = "piq-mock-state";
 const TICK_MS = 10_000;
+const POLL_MS = 5_000;
+
+// NEXT_PUBLIC_DATA_MODE=real ใน .env = หน้า /staff อ่านข้อมูลจริงจาก DB
+// (หน้า LIFF ยังใช้ข้อมูลสมมติจนกว่าจะถึงขั้นของ LIFF)
+const REAL_MODE = process.env.NEXT_PUBLIC_DATA_MODE === "real";
+let useReal = false;
 
 type Snapshot = { state: MockState; realNow: number };
 
@@ -50,12 +56,31 @@ function publish(s: MockState, persist = true) {
 
 /** Every change goes through UC13 auto-calling, so a freed doctor is always served. */
 function commit(s: MockState) {
-  publish(runAutoCall(s, simNow(s)));
+  publish(useReal ? s : runAutoCall(s, simNow(s)));
+}
+
+// ดึงข้อมูลล่าสุดจาก DB แล้วแทนที่ state ฝั่งหน้าเว็บ (ค่าที่เป็นของเบราว์เซอร์เองยังเก็บไว้ตามเดิม)
+async function pull() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) return;
+    const fresh = (await res.json()) as MockState;
+    const prev = snapshot?.state;
+    publish({ ...fresh, liffPatientId: prev?.liffPatientId ?? null, acknowledgedRedFlags: prev?.acknowledgedRedFlags ?? [] }, false);
+  } catch {
+    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
+  }
 }
 
 function start() {
   if (started) return;
   started = true;
+  useReal = REAL_MODE && window.location.pathname.startsWith("/staff");
+  if (useReal) {
+    void pull();
+    window.setInterval(pull, POLL_MS);
+    return;
+  }
   commit(load());
   window.setInterval(() => snapshot && commit(snapshot.state), TICK_MS);
   window.addEventListener("storage", (e) => {
@@ -79,9 +104,11 @@ const actions = {
     if (snapshot) commit(fn(snapshot.state, simNow(snapshot.state)));
   },
   advance(minutes: number) {
+    if (useReal) return;
     if (snapshot) commit({ ...snapshot.state, clockOffsetMs: snapshot.state.clockOffsetMs + minutes * MINUTE });
   },
   reset() {
+    if (useReal) return;
     const keep = snapshot?.state.sessionUserId ?? null;
     commit({ ...buildSeed(Date.now()), sessionUserId: keep });
   },
