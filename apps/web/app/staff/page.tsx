@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowRight, BarChart3, CalendarCheck, Megaphone, Siren, Stethoscope, Timer, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
