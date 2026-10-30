@@ -12,6 +12,12 @@ import type { MockState } from "./types";
 
 const STORAGE_KEY = "piq-mock-state";
 const TICK_MS = 10_000;
+const POLL_MS = 5_000;
+
+const REAL_MODE = process.env.NEXT_PUBLIC_DATA_MODE === "real";
+let useReal = false;
+let liffReal = false;
+let liffToken: string | null = null;
 
 type Snapshot = { state: MockState; realNow: number };
 
@@ -50,12 +56,101 @@ function publish(s: MockState, persist = true) {
 
 /** Every change goes through UC13 auto-calling, so a freed doctor is always served. */
 function commit(s: MockState) {
-  publish(runAutoCall(s, simNow(s)));
+  publish(useReal ? s : runAutoCall(s, simNow(s)));
+}
+
+// ดึงข้อมูลล่าสุดจาก DB แล้วแทนที่ state ฝั่งหน้าเว็บ (ค่าที่เป็นของเบราว์เซอร์เองยังเก็บไว้ตามเดิม)
+async function pull() {
+  try {
+    const res = await fetch("/api/state", { cache: "no-store" });
+    if (!res.ok) return;
+    const fresh = (await res.json()) as MockState;
+    const prev = snapshot?.state;
+    publish({ ...fresh, liffPatientId: prev?.liffPatientId ?? null, acknowledgedRedFlags: prev?.acknowledgedRedFlags ?? [] }, false);
+  } catch {
+    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
+  }
+}
+
+// ส่งคิวที่เปลี่ยนสถานะ/เวลาไปบันทึกที่เซิร์ฟเวอร์ แล้วดึงข้อมูลจริงกลับมาทับ
+// ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น แพทย์กำลังตรวจอยู่) จะแจ้งเตือน และหน้าจอย้อนกลับเป็นค่าจริงเอง
+async function sync(before: MockState, after: MockState) {
+  const old = new Map(before.queues.map((q) => [q.id, q]));
+  const changes = after.queues
+    .filter((q) => {
+      const o = old.get(q.id);
+      return o && (o.status !== q.status || o.calledTime !== q.calledTime || o.finishedTime !== q.finishedTime);
+    })
+    .map((q) => ({ id: q.id, status: q.status, calledTime: q.calledTime, finishedTime: q.finishedTime }));
+  if (changes.length === 0) return;
+
+  try {
+    const res = await fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queues: changes }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      window.alert(body?.error ?? "บันทึกไม่สำเร็จ");
+    }
+  } catch {
+    window.alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+  }
+  await pull();
+}
+
+async function initLiff() {
+  try {
+    const { default: liff } = await import("@line/liff");
+    await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID ?? "" });
+    if (!liff.isLoggedIn()) {
+      liff.login(); // เปิดนอกแอป LINE จะพาไปหน้าล็อกอินของ LINE ก่อน
+      return;
+    }
+    liffToken = liff.getAccessToken();
+    await pullLiff();
+  } catch (err) {
+    console.error("LIFF init failed", err);
+  }
+}
+
+async function pullLiff() {
+  if (!liffToken) return;
+  try {
+    const res = await fetch("/api/liff/state", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${liffToken}` },
+    });
+    if (res.status === 401) {
+      // token หมดอายุหรือไม่ถูกต้อง ให้ล็อกอินใหม่เพื่อขอ token ใหม่
+      liffToken = null;
+      const { default: liff } = await import("@line/liff");
+      liff.login();
+      return;
+    }
+    if (!res.ok) return;
+    publish((await res.json()) as MockState, false);
+  } catch {
+    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
+  }
 }
 
 function start() {
   if (started) return;
   started = true;
+  useReal = REAL_MODE && window.location.pathname.startsWith("/staff");
+  liffReal = REAL_MODE && window.location.pathname.startsWith("/liff");
+  if (liffReal) {
+    void initLiff();
+    window.setInterval(pullLiff, POLL_MS);
+    return;
+  }
+  if (useReal) {
+    void pull();
+    window.setInterval(pull, POLL_MS);
+    return;
+  }
   commit(load());
   window.setInterval(() => snapshot && commit(snapshot.state), TICK_MS);
   window.addEventListener("storage", (e) => {
@@ -76,12 +171,18 @@ function subscribe(listener: () => void) {
 
 const actions = {
   update(fn: (s: MockState, now: number) => MockState) {
-    if (snapshot) commit(fn(snapshot.state, simNow(snapshot.state)));
+    if (!snapshot || liffReal) return;
+    const before = snapshot.state;
+    const after = fn(before, simNow(before));
+    commit(after);
+    if (useReal) void sync(before, after);
   },
   advance(minutes: number) {
+    if (useReal || liffReal) return;
     if (snapshot) commit({ ...snapshot.state, clockOffsetMs: snapshot.state.clockOffsetMs + minutes * MINUTE });
   },
   reset() {
+    if (useReal || liffReal) return;
     const keep = snapshot?.state.sessionUserId ?? null;
     commit({ ...buildSeed(Date.now()), sessionUserId: keep });
   },

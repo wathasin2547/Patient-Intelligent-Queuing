@@ -17,6 +17,7 @@ const DEMO_USERS = [
   { id: "", label: "ผู้ใช้ LINE ใหม่ — ยังไม่ลงทะเบียน" },
 ];
 
+const REAL = process.env.NEXT_PUBLIC_DATA_MODE === "real";
 export default function LiffLayout({ children }: { children: React.ReactNode }) {
   const { state, update } = useMock();
   const pathname = usePathname();
@@ -26,20 +27,22 @@ export default function LiffLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="flex min-h-screen flex-col items-center sm:py-6">
-      <div className="flex w-full max-w-[420px] flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-0">
-        <Link href="/dev" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวมสำหรับผู้พัฒนา">
-          <House size={16} strokeWidth={1.8} />
-        </Link>
-        <select
-          value={state.liffPatientId ?? ""}
-          onChange={(e) => update((s) => ({ ...s, liffPatientId: e.target.value || null }))}
-          className="pill min-w-0 flex-1 text-xs"
-          title="ทดสอบในฐานะผู้ใช้ LINE"
-        >
-          {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
-        <MockBadge />
-      </div>
+      {!REAL && (
+        <div className="flex w-full max-w-[420px] flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-0">
+          <Link href="/dev" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink-2 ring-1 ring-line hover:text-ink" title="หน้ารวมสำหรับผู้พัฒนา">
+            <House size={16} strokeWidth={1.8} />
+          </Link>
+          <select
+            value={state.liffPatientId ?? ""}
+            onChange={(e) => update((s) => ({ ...s, liffPatientId: e.target.value || null }))}
+            className="pill min-w-0 flex-1 text-xs"
+            title="ทดสอบในฐานะผู้ใช้ LINE"
+          >
+            {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+          <MockBadge />
+        </div>
+      )}
 
       <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-brand sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(3,4,94,0.45)]">
         <div className="flex min-h-[760px] flex-1 flex-col overflow-hidden bg-canvas sm:rounded-[36px]">

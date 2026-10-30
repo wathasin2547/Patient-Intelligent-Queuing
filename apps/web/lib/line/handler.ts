@@ -25,6 +25,12 @@ export async function buildReply(event: LineEvent): Promise<LineMessage[] | null
       if (!q) return [{ type: "text", text: "ยังไม่มีคำถามในระบบ" }];
       return [buildQuestionMessage(q, [])];
     }
+
+    const t = event.message?.text?.trim();
+    if (t === "สถานะคิว" || t === "รับยา" || t === "ข้อมูลของฉัน") {
+      return [{ type: "text", text: `เมนู "${t}" กำลังพัฒนา เร็วๆ นี้ครับ` }];
+    }
+    
     return [{ type: "text", text: 'พิมพ์ "ตรวจ" เพื่อเริ่มคัดกรองอาการครับ' }];
   }
 
