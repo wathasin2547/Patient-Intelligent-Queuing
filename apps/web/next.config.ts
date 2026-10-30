@@ -8,6 +8,10 @@ const repoRoot = path.resolve(process.cwd(), "../..");
 const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
+  // อนุญาตให้เปิด dev server ผ่านโดเมน ngrok (ไม่ต้องใส่ https://)
+  allowedDevOrigins: ["affidavit-manlike-corncob.ngrok-free.dev"],
 };
+
+
 
 export default nextConfig;

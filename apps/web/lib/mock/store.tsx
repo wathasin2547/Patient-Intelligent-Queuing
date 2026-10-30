@@ -14,10 +14,10 @@ const STORAGE_KEY = "piq-mock-state";
 const TICK_MS = 10_000;
 const POLL_MS = 5_000;
 
-// NEXT_PUBLIC_DATA_MODE=real ใน .env = หน้า /staff อ่านข้อมูลจริงจาก DB
-// (หน้า LIFF ยังใช้ข้อมูลสมมติจนกว่าจะถึงขั้นของ LIFF)
 const REAL_MODE = process.env.NEXT_PUBLIC_DATA_MODE === "real";
 let useReal = false;
+let liffReal = false;
+let liffToken: string | null = null;
 
 type Snapshot = { state: MockState; realNow: number };
 
@@ -100,10 +100,52 @@ async function sync(before: MockState, after: MockState) {
   await pull();
 }
 
+async function initLiff() {
+  try {
+    const { default: liff } = await import("@line/liff");
+    await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID ?? "" });
+    if (!liff.isLoggedIn()) {
+      liff.login(); // เปิดนอกแอป LINE จะพาไปหน้าล็อกอินของ LINE ก่อน
+      return;
+    }
+    liffToken = liff.getAccessToken();
+    await pullLiff();
+  } catch (err) {
+    console.error("LIFF init failed", err);
+  }
+}
+
+async function pullLiff() {
+  if (!liffToken) return;
+  try {
+    const res = await fetch("/api/liff/state", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${liffToken}` },
+    });
+    if (res.status === 401) {
+      // token หมดอายุหรือไม่ถูกต้อง ให้ล็อกอินใหม่เพื่อขอ token ใหม่
+      liffToken = null;
+      const { default: liff } = await import("@line/liff");
+      liff.login();
+      return;
+    }
+    if (!res.ok) return;
+    publish((await res.json()) as MockState, false);
+  } catch {
+    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
+  }
+}
+
 function start() {
   if (started) return;
   started = true;
   useReal = REAL_MODE && window.location.pathname.startsWith("/staff");
+  liffReal = REAL_MODE && window.location.pathname.startsWith("/liff");
+  if (liffReal) {
+    void initLiff();
+    window.setInterval(pullLiff, POLL_MS);
+    return;
+  }
   if (useReal) {
     void pull();
     window.setInterval(pull, POLL_MS);
@@ -129,18 +171,18 @@ function subscribe(listener: () => void) {
 
 const actions = {
   update(fn: (s: MockState, now: number) => MockState) {
-    if (!snapshot) return;
+    if (!snapshot || liffReal) return;
     const before = snapshot.state;
     const after = fn(before, simNow(before));
     commit(after);
     if (useReal) void sync(before, after);
   },
   advance(minutes: number) {
-    if (useReal) return;
+    if (useReal || liffReal) return;
     if (snapshot) commit({ ...snapshot.state, clockOffsetMs: snapshot.state.clockOffsetMs + minutes * MINUTE });
   },
   reset() {
-    if (useReal) return;
+    if (useReal || liffReal) return;
     const keep = snapshot?.state.sessionUserId ?? null;
     commit({ ...buildSeed(Date.now()), sessionUserId: keep });
   },
