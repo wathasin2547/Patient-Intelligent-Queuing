@@ -63,9 +63,17 @@ def triage(
         ),
     )
 
+    nothing_scored = department is None
+    if nothing_scored:
+        department = repo.fallback_department()
+
     # ── steps 7-8 ──
     level = rules.compute_priority_level(codes, catalog, inp)
     online = rules.check_online_eligible(codes, catalog, level, inp)
+    # Text nobody read may hold a reason to come in, so the closed answers alone can't clear online
+    if inp.free_text and inp.free_text.strip() and llm_status != "ok":
+        online = False
+        warnings.append("free text was not read; online not offered")
 
     result = TriageResult(
         symptom_codes=codes,
@@ -80,10 +88,13 @@ def triage(
         reason=rules.reason_for(department, contributions) if department else [],
         warnings=warnings,
     )
-    if department is None:
-        # nothing to go on: never suggest online, let staff look at it
+    if nothing_scored:
+        # nothing to go on: never suggest online
         result.online_eligible = False
-        result.warnings.append("no department scored above zero; staff must assign one")
+        result.warnings.append("no department scored above zero; sent to the fallback department")
+    if department is None:
+        # a DB seeded before the fallback department existed: staff must assign one
+        result.warnings.append("no fallback department configured; staff must assign one")
         return result
 
     # ── steps 9-10 ──

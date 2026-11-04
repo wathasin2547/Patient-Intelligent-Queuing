@@ -21,9 +21,9 @@ def test_red_flags_ticked_in_closed_answers_are_always_caught():
             assert x.result.is_red_flag, x.id
 
 
-def test_red_flag_and_unassigned_cases_are_never_offered_online():
+def test_red_flag_and_unscored_cases_are_never_offered_online():
     for x in run_vignettes(MORNING):
-        if x.result.is_red_flag or x.result.assigned_department is None:
+        if x.result.is_red_flag or not x.result.department_scores:
             assert not x.result.online_eligible, x.id
 
 

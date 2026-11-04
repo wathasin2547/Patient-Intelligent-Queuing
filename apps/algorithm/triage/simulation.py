@@ -42,7 +42,7 @@ class SimConfig:
     dept_mix: dict[str, float] = field(default_factory=lambda: {"MED": 0.50, "SURG": 0.20, "PED": 0.15, "ENT": 0.15})
     # [Kaggle] Emergency / Urgent / Semi-urgent / Non-urgent; Immediate (1.9%) goes to the ER, not the queue
     level_mix: dict[int, float] = field(default_factory=lambda: {2: 0.081, 3: 0.196, 4: 0.302, 5: 0.421})
-    # doctors: (department, shift start hour, shift end hour) — same roster as data/catalog.json
+    # doctors: (department, shift start hour, shift end hour) — same roster as data/catalog.json, without GEN (no simulated case falls through to it)
     doctors: list[tuple[str, int, int]] = field(default_factory=lambda: [
         ("MED", 8, 16), ("MED", 8, 16), ("SURG", 8, 16), ("PED", 8, 16), ("ENT", 8, 12)])
     nurses: int = 2                           # assumption: screening desk staff

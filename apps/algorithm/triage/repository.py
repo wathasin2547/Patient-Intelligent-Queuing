@@ -13,7 +13,12 @@ from typing import Protocol
 
 from pymongo import MongoClient
 
-from .config import DEFAULT_AGE_BONUS_MINUTES, DEFAULT_CHRONIC_BONUS_MINUTES, DEFAULT_PRIORITY_AGE_GROUPS
+from .config import (
+    DEFAULT_AGE_BONUS_MINUTES,
+    DEFAULT_CHRONIC_BONUS_MINUTES,
+    DEFAULT_PRIORITY_AGE_GROUPS,
+    FALLBACK_DEPARTMENT_CODE,
+)
 from .models import Option, Question, Shift, SymptomCode, WaitingQueue
 from .queueing import RiskBonus
 
@@ -30,6 +35,7 @@ class Repository(Protocol):
     def busy_doctor_ids(self) -> set[str]: ...
     def upcoming_appointments(self, now: datetime, minutes: int) -> dict[str, int]: ...
     def risk_bonus(self) -> RiskBonus: ...
+    def fallback_department(self) -> str | None: ...
 
 
 def _options(raw: list[dict]) -> list[Option]:
@@ -117,6 +123,11 @@ class MongoRepository:
         })
         return dict(Counter(str(a["doctorId"]) for a in due))
 
+    def fallback_department(self) -> str | None:
+        """Department for cases no department scored on; None until the DB has been reseeded."""
+        d = self.db["Department"].find_one({"code": FALLBACK_DEPARTMENT_CODE})
+        return str(d["_id"]) if d else None
+
     def ping(self) -> None:
         self.client.admin.command("ping")
 
@@ -155,6 +166,10 @@ class CatalogRepository:
             )
             for s in self.data["symptomCodes"]
         }
+
+    def fallback_department(self) -> str | None:
+        keys = {d["key"] for d in self.data["departments"]}
+        return FALLBACK_DEPARTMENT_CODE if FALLBACK_DEPARTMENT_CODE in keys else None
 
     def questions(self) -> dict[str, Question]:
         return {

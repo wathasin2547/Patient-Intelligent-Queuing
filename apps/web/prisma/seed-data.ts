@@ -6,7 +6,7 @@
 
 import catalog from "../../../data/catalog.json";
 
-export type DeptKey = "MED" | "SURG" | "PED" | "ENT";
+export type DeptKey = "MED" | "SURG" | "PED" | "ENT" | "GEN";
 
 type DepartmentSeed = { key: DeptKey; name: string; scopeOfCare: string };
 

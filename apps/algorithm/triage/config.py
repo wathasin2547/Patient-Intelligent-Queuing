@@ -16,6 +16,8 @@ DEFAULT_CHRONIC_BONUS_MINUTES = 15.0
 DEFAULT_PRIORITY_AGE_GROUPS: tuple[str, ...] = ("60+",)
 # Appointments due within this window count as doctor load (same as LOAD_WINDOW_MINUTES in the web app).
 LOAD_WINDOW_MINUTES = 60
+# Department.code that takes cases no department scored on (general practice).
+FALLBACK_DEPARTMENT_CODE = "GEN"
 
 
 def base_scores() -> dict[int, float]:

@@ -13,7 +13,7 @@ import type {
 export const MOCK_VERSION = 9;
 
 /** Mock fallback consultation minutes per department, used by the ETA until real averages exist. */
-const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10 };
+const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10, GEN: 8 };
 /** The demo always opens at 10:30 Bangkok time so doctors are on shift whenever you run it. */
 export const DEMO_START = "10:30";
 
@@ -40,13 +40,12 @@ export function buildSeed(realNow: number): MockState {
   // ── master data ──
   const departments: Department[] = [
     ...catalog.departments.map((d) => ({ id: deptId(d.key), code: d.key === "SURG" ? "SUR" : d.key, name: d.name, scopeOfCare: d.scopeOfCare, defaultServiceMinutes: SERVICE_MINUTES[d.key] ?? 10, isActive: true })),
-    { id: deptId("GEN"), code: "GEN", name: "เวชปฏิบัติทั่วไป", scopeOfCare: "อาการที่ยังจำแนกแผนกไม่ได้ หรือไม่ได้คะแนนจากแผนกใด", defaultServiceMinutes: 8, isActive: true },
   ];
 
   const doctors: Doctor[] = [];
   const doctorHours: Record<string, [number, number]> = {};
   const perDept: Record<string, number> = {};
-  for (const d of [...catalog.doctors, { name: "แพทย์ทดสอบ เวชปฏิบัติ 1", dept: "GEN", startHour: 8, endHour: 16 }]) {
+  for (const d of catalog.doctors) {
     perDept[d.dept] = (perDept[d.dept] ?? 0) + 1;
     const id = `doc_${d.dept}${perDept[d.dept]}`;
     doctors.push({ id, name: d.name, departmentId: deptId(d.dept), meetingUrl: `https://meet.example.com/piq-${id.slice(4).toLowerCase()}` });

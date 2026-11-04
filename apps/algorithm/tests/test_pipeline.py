@@ -84,10 +84,33 @@ def test_tie_goes_to_department_with_shorter_average_wait():
     assert pick_department(scores, lambda t: min(t, key=waits.get)) == "SURG"
 
 
-def test_nothing_scored_needs_staff():
+def test_nothing_scored_goes_to_general_practice():
     res = run(ADULT, NO_RED_FLAG)
-    assert res.assigned_department is None and res.warnings
+    assert res.assigned_department == "GEN" and res.doctor_id == "GEN-1" and res.warnings
     assert not res.online_eligible  # unknown case must not be sent home
+
+
+def test_nothing_scored_without_fallback_department_needs_staff():
+    r = repo()
+    r.fallback_department = lambda: None  # a DB seeded before GEN existed
+    res = triage(inp(answer(r, *ADULT), answer(r, *NO_RED_FLAG)), r, MORNING)
+    assert res.assigned_department is None and res.doctor_id is None
+    assert not res.online_eligible
+
+
+# ── free text that was not read ──
+
+def test_unread_free_text_blocks_online():
+    # "ผื่นคัน" alone is online eligible, but the patient typed something nobody read
+    for status in ("skipped", "failed"):
+        res = run(ADULT, NO_RED_FLAG, (3, "ผื่นคัน"), free_text="หายใจไม่ทัน",
+                  extractor=SpyLLM([], status=status))
+        assert not res.online_eligible and res.warnings
+
+
+def test_free_text_read_keeps_online():
+    res = run(ADULT, NO_RED_FLAG, (3, "ผื่นคัน"), free_text="คันมาก", extractor=SpyLLM([]))
+    assert res.online_eligible
 
 
 # ── priority + online ──
