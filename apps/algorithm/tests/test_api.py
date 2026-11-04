@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
-from main import app, get_now, get_repo
+from main import app, get_extractor, get_now, get_repo
 from tests.helpers import MORNING, queue, repo
+from triage.llm import NoLLM
 
 client = TestClient(app)
 
@@ -14,6 +15,7 @@ def setup_module():
     ]
     app.dependency_overrides[get_repo] = lambda: repo(MORNING, waiting)
     app.dependency_overrides[get_now] = lambda: MORNING
+    app.dependency_overrides[get_extractor] = NoLLM  # a key in .env must not make tests call the LLM
 
 
 def teardown_module():

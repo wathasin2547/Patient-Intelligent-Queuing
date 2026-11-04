@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from triage import config
+from triage.llm import SymptomExtractor, extractor_from_env
 from triage.models import ClosedAnswer, TriageInput
 from triage.pipeline import triage
 from triage.queueing import rank_queues
@@ -29,6 +30,11 @@ def get_repo() -> Repository:
     if not url:
         raise RuntimeError("DATABASE_URL is not set (copy .env.example to .env)")
     return MongoRepository(url)
+
+
+@lru_cache
+def get_extractor() -> SymptomExtractor:
+    return extractor_from_env()
 
 
 def get_now() -> datetime:
@@ -107,6 +113,7 @@ def triage_endpoint(
     body: TriageRequest,
     repo: Repository = Depends(get_repo),
     now: datetime = Depends(get_now),
+    extractor: SymptomExtractor = Depends(get_extractor),
 ) -> TriageResponse:
     r = triage(
         TriageInput(
@@ -117,6 +124,7 @@ def triage_endpoint(
         ),
         repo,
         now,
+        extractor,
     )
     return TriageResponse(
         symptomCodes=r.symptom_codes,

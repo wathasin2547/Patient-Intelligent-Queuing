@@ -35,7 +35,7 @@ export async function callTriage(body: TriageRequest): Promise<TriageResult> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(8000), // ไม่รอเกิน 8 วินาที
+    signal: AbortSignal.timeout(12000), // LLM 5 วินาที + ลองซ้ำ 1 ครั้ง ต้องจบก่อนหมดเวลานี้
   });
 
   if (!res.ok) {

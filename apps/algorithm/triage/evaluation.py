@@ -1,6 +1,7 @@
 """Run case vignettes through the pipeline and score them (thesis §3.7, experiments 1, 3 and 5)."""
 
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -70,6 +71,16 @@ def run_vignettes(
     return out
 
 
+def wilson_ci95(hits: int, total: int) -> tuple[float, float]:
+    """Wilson 95% interval: stays sensible for a small sample like the vignette set."""
+    z = 1.96
+    p = hits / total
+    d = 1 + z * z / total
+    centre = (p + z * z / (2 * total)) / d
+    half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / d
+    return round(centre - half, 3), round(centre + half, 3)
+
+
 def summarize(results: list[CaseResult]) -> dict:
     def rate(hits, total):
         return round(hits / total, 3) if total else None
@@ -83,14 +94,16 @@ def summarize(results: list[CaseResult]) -> dict:
     for x in dept_cases:
         by_group.setdefault(x.group, []).append(x)
 
+    dept_hits = sum(x.result.assigned_department == x.expected["department"] for x in dept_cases)
+
     return {
         "cases": len(results),
         "allCorrect": rate(sum(not x.mismatches for x in results), len(results)),
-        "departmentAccuracy": rate(
-            sum(x.result.assigned_department == x.expected["department"] for x in dept_cases),
-            len(dept_cases)),
-        "departmentAccuracyByGroup": {
-            g: rate(sum(x.result.assigned_department == x.expected["department"] for x in xs), len(xs))
+        "departmentCases": len(dept_cases),
+        "departmentAccuracy": rate(dept_hits, len(dept_cases)),
+        "departmentAccuracyCI95": wilson_ci95(dept_hits, len(dept_cases)),
+        "departmentCorrectByGroup": {
+            g: f"{sum(x.result.assigned_department == x.expected['department'] for x in xs)}/{len(xs)}"
             for g, xs in by_group.items()
         },
         "priorityAccuracy": rate(

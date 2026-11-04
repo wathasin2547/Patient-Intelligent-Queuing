@@ -3,8 +3,9 @@
 The data file is NOT in the repo (real de-identified patient records). Pass its path:
     python -m scripts.evaluate_ktas ../../../docs/datasets/ktas/pone.0216972.s001.xlsx
 
-Rule-only for now: the chief complaint is free text, so most cases need the LLM (phase 5)
-to be understood. Use this run as the baseline for experiment 3.
+Rule-only on purpose: the chief complaint is free text, so most cases need the LLM to be
+understood. Use this run as the baseline for experiment 4. Do not add the free-tier LLM here:
+these are real patient records and its terms forbid sending sensitive or personal data.
 """
 
 import argparse
@@ -21,6 +22,19 @@ from triage.pipeline import triage
 from triage.repository import CatalogRepository
 
 NOW = datetime(2026, 10, 1, 10, 0, tzinfo=timezone(timedelta(hours=7))).astimezone(timezone.utc)
+
+
+def agreement(levels: list[int], expert: list[int]) -> dict:
+    """Agreement with the expert level. Higher number = less urgent, so level > expert is under-triage."""
+    n = len(expert)
+    pairs = list(zip(levels, expert))
+    return {
+        "exactAgreement": round(sum(a == e for a, e in pairs) / n, 3),
+        "withinOneLevel": round(sum(abs(a - e) <= 1 for a, e in pairs) / n, 3),
+        "underTriageRate": round(sum(a > e for a, e in pairs) / n, 3),
+        "overTriageRate": round(sum(a < e for a, e in pairs) / n, 3),
+        "expertLevel1or2SentToQueueAsLevel3to5": sum(a >= 3 and e <= 2 for a, e in pairs),
+    }
 
 
 def main() -> None:
@@ -40,13 +54,9 @@ def main() -> None:
         pairs.append((rec, res))
 
     n = len(pairs)
-    exact = sum(res.priority_level == rec.ktas_expert for rec, res in pairs)
-    within1 = sum(abs(res.priority_level - rec.ktas_expert) <= 1 for rec, res in pairs)
-    # higher number = less urgent, so ours > expert means under-triage
-    under = sum(res.priority_level > rec.ktas_expert for rec, res in pairs)
-    over = sum(res.priority_level < rec.ktas_expert for rec, res in pairs)
+    ours = [res.priority_level for _, res in pairs]
+    expert = [rec.ktas_expert for rec, _ in pairs]
     critical = [(rec, res) for rec, res in pairs if rec.ktas_expert <= 2]
-    critical_missed = sum(res.priority_level >= 3 for _, res in critical)
     critical_online = sum(res.online_eligible for _, res in critical)
     nurse_minutes = [r.triage_minutes for r in records if r.triage_minutes is not None]
 
@@ -55,13 +65,18 @@ def main() -> None:
         "records": n,
         "expertLevelDistribution": dict(sorted(Counter(r.ktas_expert for r in records).items())),
         "ourLevelDistribution": dict(sorted(Counter(res.priority_level for _, res in pairs).items())),
-        "exactAgreement": round(exact / n, 3),
-        "withinOneLevel": round(within1 / n, 3),
-        "underTriageRate": round(under / n, 3),
-        "overTriageRate": round(over / n, 3),
+        # expert level -> our level -> count (aggregate only, no individual records)
+        "confusion": {e: dict(sorted(Counter(a for a, x in zip(ours, expert) if x == e).items()))
+                      for e in sorted(set(expert))},
+        **agreement(ours, expert),
+        # a constant answer shows how much the headline rates owe to levels 3-4 being most of the data
+        "referenceAlways3": agreement([3] * n, expert),
+        "referenceAlways4": agreement([4] * n, expert),
+        "referenceNurse": agreement([r.ktas_nurse for r in records], expert),
         "expertLevel1or2": len(critical),
-        "expertLevel1or2SentToQueueAsLevel3to5": critical_missed,
         "expertLevel1or2OfferedOnline": critical_online,
+        "emergency": sum(res.is_red_flag for _, res in pairs),
+        "noDepartmentScored": sum(not res.is_red_flag and not res.department_scores for _, res in pairs),
         "nurseTriageMinutesMedian": round(median(nurse_minutes), 2),
         "ourProcessingMsMedian": round(median(elapsed), 3),
     }
