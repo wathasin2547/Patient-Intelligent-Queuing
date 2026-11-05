@@ -1,6 +1,3 @@
-// อ่านข้อมูลจริงจากฐานข้อมูล แล้วแปลงให้อยู่ในรูปแบบเดียวกับที่หน้าเว็บใช้อยู่ (MockState)
-// หน้าเว็บจึงแสดงข้อมูลจริงได้โดยไม่ต้องแก้โค้ดของหน้า
-
 import { prisma } from "@/lib/prisma";
 import { bkkDate } from "@/lib/mock/time";
 import type { Level, MockState, Settings } from "@/lib/mock/types";
@@ -91,7 +88,6 @@ export async function loadState(): Promise<MockState> {
           priorityAgeGroups: setting.priorityAgeGroups,
         }
       : DEFAULT_SETTINGS,
-    // ส่วนที่ยังไม่ดึงจาก DB (ขั้นถัดไปค่อยเพิ่ม) ใส่เป็นลิสต์ว่างไปก่อน
     appointments: [],
     screenings: [],
     prescriptions: [],

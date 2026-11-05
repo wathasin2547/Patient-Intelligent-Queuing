@@ -20,7 +20,6 @@ const PATIENT: Item[] = [
   { href: "/liff/medicine", title: "เลือกวิธีรับยา", uc: "UC06", icon: Pill },
 ];
 
-/** Map of every screen, for the developers only: `next dev` shows it, a production build answers 404. */
 export default function DevIndex() {
   if (process.env.NODE_ENV === "production") notFound();
   return (

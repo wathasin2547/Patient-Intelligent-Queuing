@@ -1,10 +1,3 @@
-"""Safety checks over the vignette set.
-
-Accuracy is NOT asserted here on purpose: the expected answers are written independently
-of the weights, and the accuracy figure is a result for chapter 4, not a test target.
-Run `python -m scripts.evaluate_vignettes` to see it.
-"""
-
 from tests.helpers import MORNING
 from triage.evaluation import load_vignettes, run_vignettes, summarize
 
@@ -21,9 +14,9 @@ def test_red_flags_ticked_in_closed_answers_are_always_caught():
             assert x.result.is_red_flag, x.id
 
 
-def test_red_flag_and_unassigned_cases_are_never_offered_online():
+def test_red_flag_and_unscored_cases_are_never_offered_online():
     for x in run_vignettes(MORNING):
-        if x.result.is_red_flag or x.result.assigned_department is None:
+        if x.result.is_red_flag or not x.result.department_scores:
             assert not x.result.online_eligible, x.id
 
 

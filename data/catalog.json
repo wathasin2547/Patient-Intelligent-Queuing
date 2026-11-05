@@ -3,7 +3,8 @@
     {"key": "MED", "name": "อายุรกรรม", "scopeOfCare": "อาการทั่วไปของผู้ใหญ่ ไข้ ไอ ปวดท้องทั่วไป ท้องเสีย โรคเรื้อรัง"},
     {"key": "SURG", "name": "ศัลยกรรม", "scopeOfCare": "บาดแผล ปวดท้องเฉพาะที่ ก้อนผิดปกติ"},
     {"key": "PED", "name": "กุมารเวชกรรม", "scopeOfCare": "ผู้ป่วยเด็กอายุต่ำกว่า 18 ปี"},
-    {"key": "ENT", "name": "หู คอ จมูก", "scopeOfCare": "ปวดหู เจ็บคอ น้ำมูก เลือดกำเดาไหล"}
+    {"key": "ENT", "name": "หู คอ จมูก", "scopeOfCare": "ปวดหู เจ็บคอ น้ำมูก เลือดกำเดาไหล"},
+    {"key": "GEN", "name": "เวชปฏิบัติทั่วไป", "scopeOfCare": "อาการที่ยังจำแนกแผนกไม่ได้ หรือไม่ได้คะแนนจากแผนกใด"}
   ],
   "symptomCodes": [
     {"code": "chest_pain_severe", "label": "เจ็บแน่นหน้าอกรุนแรง", "synonyms": ["แน่นหน้าอก", "เจ็บหน้าอกร้าวไปแขน"], "weights": {"MED": 5}, "isRedFlag": true, "onsiteOnly": true},
@@ -140,6 +141,7 @@
     {"name": "แพทย์ทดสอบ อายุรกรรม 2", "dept": "MED", "startHour": 8, "endHour": 16},
     {"name": "แพทย์ทดสอบ ศัลยกรรม 1", "dept": "SURG", "startHour": 8, "endHour": 16},
     {"name": "แพทย์ทดสอบ กุมารเวช 1", "dept": "PED", "startHour": 8, "endHour": 16},
-    {"name": "แพทย์ทดสอบ หู คอ จมูก 1", "dept": "ENT", "startHour": 8, "endHour": 12}
+    {"name": "แพทย์ทดสอบ หู คอ จมูก 1", "dept": "ENT", "startHour": 8, "endHour": 12},
+    {"name": "แพทย์ทดสอบ เวชปฏิบัติ 1", "dept": "GEN", "startHour": 8, "endHour": 16}
   ]
 }

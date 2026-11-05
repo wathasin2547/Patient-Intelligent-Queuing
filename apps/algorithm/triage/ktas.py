@@ -1,17 +1,3 @@
-"""Public KTAS triage dataset (Moon et al., PLOS ONE 2019, CC BY 4.0) as an external reference.
-
-1,267 de-identified adult ED records with an expert-agreed KTAS level 1-5.
-This is REAL (de-identified) patient data, so it is never committed to git and never
-loaded into MongoDB: the file stays outside the repo and is only read by the offline
-evaluation script. See docs/datasets/ktas/README.md outside the repo.
-
-Mapping a record to our input (the patient only reports what they could tell LIFF):
-- Age             -> age question (q1)
-- Mental != alert -> red flag option "ซึมลงหรือหมดสติ" (q2), otherwise "none"
-- Chief_complain  -> freeText (needs the LLM; ignored in rule-only mode)
-Vital signs and pain score are NOT used: our system has no nurse measuring them.
-"""
-
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,7 +8,7 @@ from .repository import Repository
 @dataclass
 class KtasRecord:
     age: float
-    mental: int  # 1 alert, 2 verbal, 3 pain, 4 unresponsive
+    mental: int
     chief_complaint: str
     ktas_expert: int
     ktas_nurse: int
@@ -30,7 +16,7 @@ class KtasRecord:
 
 
 def load_ktas(path: Path) -> list[KtasRecord]:
-    import openpyxl  # only needed for this offline script
+    import openpyxl
 
     wb = openpyxl.load_workbook(path, read_only=True)
     rows = list(wb.worksheets[0].iter_rows(values_only=True))

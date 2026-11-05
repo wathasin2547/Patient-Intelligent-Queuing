@@ -43,7 +43,6 @@ export async function replyMessage(
     throw new Error(`LINE reply failed: ${res.status} ${await res.text()}`);
   }
 }
-// push ข้อความเเจ้งว่าถึงคิวเเล้ว
 export async function pushMessage(to: string, messages: LineMessage[], accessToken: string): Promise<void> {
   const res = await fetch(PUSH_URL, {
     method: "POST",

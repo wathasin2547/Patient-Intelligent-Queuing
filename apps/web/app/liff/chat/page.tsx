@@ -1,8 +1,5 @@
 "use client";
 
-// UC03 happens in the LINE chat itself (quick-reply questions, see feature/line-webhook),
-// not in a LIFF page. This screen only tells the patient where to go.
-
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { ACTIVE } from "@/lib/mock/logic";
@@ -19,7 +16,6 @@ export default function ChatInfoPage() {
   const active = state.queues.filter((q) => q.patientId === state.liffPatientId && ACTIVE.includes(q.status));
   const max = state.settings.maxActiveQueues;
 
-  // a second symptom may need another department, up to the limit (one queue per department)
   if (active.length >= max) {
     return (
       <div className="flex flex-1 flex-col justify-center gap-4 p-5 text-center">

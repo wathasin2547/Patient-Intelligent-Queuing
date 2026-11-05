@@ -1,7 +1,3 @@
-// Demo only: builds a screening result the way the Python service would (red flag → S_d → level),
-// so the queue page can show what happens after UC04 hands a patient to UC10.
-// The real decision is made by apps/algorithm — do not grow this into a second implementation.
-
 import type { Level, MockState, Screening } from "./types";
 
 export const PRESETS: { label: string; answers: [string, string][]; freeText?: string; codes: string[] }[] = [

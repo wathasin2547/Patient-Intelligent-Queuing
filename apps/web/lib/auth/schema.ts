@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// UC02 login form. Used on the server (server action + Credentials authorize), messages are shown to staff.
 export const loginSchema = z.object({
   username: z
     .string()
@@ -18,7 +17,6 @@ export type Role = (typeof ROLES)[number];
 
 export const homeOf = (role: Role) => (role === "DOCTOR" ? "/staff/doctor" : "/staff");
 
-/** Doctors may open only their own page and a queue's detail; staff and admins the rest; admins alone the master data. */
 export function canOpen(role: Role, pathname: string): boolean {
   const doctorPath = pathname.startsWith("/staff/doctor") || /^\/staff\/queues\/[^/]+$/.test(pathname);
   if (role === "DOCTOR") return doctorPath;

@@ -4,7 +4,6 @@ import { getLineUserId } from "@/lib/line/profile";
 
 export const dynamic = "force-dynamic";
 
-// หน้า LIFF เรียกด้วย Authorization: Bearer <LINE access token>
 export async function GET(req: Request) {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -17,7 +16,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ...state,
-    // ผู้ป่วยเห็นเฉพาะข้อมูลตัวเอง และไม่ส่งรายชื่อบัญชีเจ้าหน้าที่ไปให้
     patients: me ? [me] : [],
     users: [],
     sessionUserId: null,

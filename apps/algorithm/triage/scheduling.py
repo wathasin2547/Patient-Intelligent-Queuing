@@ -1,5 +1,3 @@
-"""Shift check and doctor assignment (thesis §3.4.8, algorithm steps 9-10)."""
-
 from collections import Counter
 from datetime import datetime
 
@@ -25,11 +23,6 @@ def pick_doctor(
     busy: set[str] | frozenset[str] = frozenset(),
     upcoming: dict[str, int] | None = None,
 ) -> str | None:
-    """Least-loaded doctor: waiting patients + the patient in the room + appointments due within the hour.
-
-    Counting the patient in the room matters: with waiting patients only, two doctors with empty
-    queues tie and the busy one may be picked while the other sits idle (found in the simulation).
-    """
     if not doctor_ids:
         return None
     load = Counter(q.doctor_id for q in waiting)

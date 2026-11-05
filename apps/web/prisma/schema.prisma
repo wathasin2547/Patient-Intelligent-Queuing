@@ -1,6 +1,3 @@
-// Collection and field names must match SPEC.md §2 and the ER diagram in the thesis.
-// Changing a name here means updating the report too.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,7 +11,7 @@ model Patient {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   lineUserId     String   @unique
   fullName       String?
-  ageGroup       String? // "0-5" | "6-17" | "18-59" | "60+"
+  ageGroup       String?
   gender         String?
   healthCoverage String?
   isChronic      Boolean  @default(false)
@@ -29,44 +26,44 @@ model Patient {
 
 model SymptomCode {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  code              String   @unique // "abdominal_pain_rlq"
-  label             String // "ปวดท้องด้านขวาล่าง"
-  synonyms          String[] // words patients tend to use; helps the LLM
-  departmentWeights Json // { "<departmentId>": number }
+  code              String   @unique
+  label             String
+  synonyms          String[]
+  departmentWeights Json
   isRedFlag         Boolean  @default(false)
   onsiteOnly        Boolean  @default(false)
-  priorityHint      Int? // 1-5, minimum level forced by this code
+  priorityHint      Int?
   isActive          Boolean  @default(true)
 }
 
 model Question {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
   questionText String
-  options      Json // [{ label, symptomCode }]
-  group        String // "basic" | "redflag" | "chief" | "chronic"
+  options      Json
+  group        String
   order        Int
-  dependsOn    Json? // condition for showing this question
+  dependsOn    Json?
   isActive     Boolean @default(true)
 }
 
 model Screening {
   id                 String   @id @default(auto()) @map("_id") @db.ObjectId
   patientId          String   @db.ObjectId
-  answers            Json // raw closed-ended answers
+  answers            Json
   freeTextInput      String?
-  symptomCodes       String[] // merged codes from both sources
-  llmCodes           String[] // codes that came from the LLM only (for auditing)
-  llmStatus          String // "ok" | "skipped" | "failed"
-  departmentScores   Json // { "<departmentId>": number }
+  symptomCodes       String[]
+  llmCodes           String[]
+  llmStatus          String
+  departmentScores   Json
   assignedDepartment String?  @db.ObjectId
-  priorityLevel      Int // 1-5
+  priorityLevel      Int
   onlineEligible     Boolean  @default(false)
   isRedFlag          Boolean  @default(false)
-  reason             Json // which codes drove the decision
+  reason             Json
   createdAt          DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id])
-  queues  Queue[] // more than one when the patient is referred on the same day
+  queues  Queue[]
 }
 
 model Department {
@@ -74,7 +71,7 @@ model Department {
   name                  String  @unique
   code                  String?
   scopeOfCare           String?
-  defaultServiceMinutes Int     @default(10) // ETA fallback until the doctor has finished cases today
+  defaultServiceMinutes Int     @default(10)
   isActive              Boolean @default(true)
 
   doctors Doctor[]
@@ -85,7 +82,7 @@ model Doctor {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   departmentId String  @db.ObjectId
-  meetingUrl   String? // fixed room on an external video service for online visits
+  meetingUrl   String?
 
   department   Department    @relation(fields: [departmentId], references: [id])
   shifts       Shift[]
@@ -93,15 +90,14 @@ model Doctor {
   appointments Appointment[]
 }
 
-// Appointment queues recorded by staff (UC11); patients cannot book by themselves
 model Appointment {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   patientId       String   @db.ObjectId
   doctorId        String   @db.ObjectId
   appointmentTime DateTime
   reason          String
-  status          String   @default("SCHEDULED") // SCHEDULED | ARRIVED | CANCELLED | MISSED
-  createdBy       String   @db.ObjectId // User who recorded it
+  status          String   @default("SCHEDULED")
+  createdBy       String   @db.ObjectId
   createdAt       DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id])
@@ -115,28 +111,28 @@ model Shift {
   date      DateTime
   startTime DateTime
   endTime   DateTime
-  status    String   @default("ACTIVE") // ACTIVE | CANCELLED
+  status    String   @default("ACTIVE")
 
   doctor Doctor @relation(fields: [doctorId], references: [id])
 }
 
 model Queue {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId
-  patientId           String    @db.ObjectId // read by the algorithm service (one call at a time per patient)
-  screeningId         String    @db.ObjectId // not unique: a same-day referral reuses the screening
-  appointmentId       String?   @db.ObjectId // set when the queue comes from a checked-in appointment
+  patientId           String    @db.ObjectId
+  screeningId         String    @db.ObjectId
+  appointmentId       String?   @db.ObjectId
   departmentId        String    @db.ObjectId
   doctorId            String?   @db.ObjectId
-  queueNumber         String // "MED-014"
-  visitType           String // "ONSITE" | "ONLINE"
-  priorityLevel       Int // copied from screening (staff may edit)
-  status              String    @default("WAITING") // WAITING | CALLED | IN_PROGRESS | DONE | NO_SHOW | CANCELLED
+  queueNumber         String
+  visitType           String
+  priorityLevel       Int
+  status              String    @default("WAITING")
   checkInTime         DateTime  @default(now())
   calledTime          DateTime?
   finishedTime        DateTime?
   editedBy            String?   @db.ObjectId
   editedAt            DateTime?
-  referredFromQueueId String?   @db.ObjectId // same-day referral from another department
+  referredFromQueueId String?   @db.ObjectId
 
   patient      Patient       @relation(fields: [patientId], references: [id])
   screening    Screening     @relation(fields: [screeningId], references: [id])
@@ -149,7 +145,7 @@ model Queue {
 model Prescription {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   queueId    String   @unique @db.ObjectId
-  items      Json // [{ name, dosage, quantity }]
+  items      Json
   daysSupply Int
   issuedAt   DateTime @default(now())
 
@@ -161,9 +157,9 @@ model Prescription {
 model Delivery {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   prescriptionId String   @unique @db.ObjectId
-  method         String // "PICKUP" | "SHIP"
+  method         String
   address        String?
-  status         String   @default("PENDING") // PENDING | PREPARING | READY | SHIPPED | COMPLETED
+  status         String   @default("PENDING")
   updatedAt      DateTime @updatedAt
 
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
@@ -175,7 +171,7 @@ model RefillSchedule {
   prescriptionId String    @db.ObjectId
   dueDate        DateTime
   remindedAt     DateTime?
-  status         String    @default("PENDING") // PENDING | SENT | CLOSED
+  status         String    @default("PENDING")
 
   patient      Patient      @relation(fields: [patientId], references: [id])
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
@@ -185,18 +181,17 @@ model User {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
   username     String  @unique
   passwordHash String
-  role         String // STAFF | ADMIN | DOCTOR
+  role         String
   departmentId String? @db.ObjectId
-  doctorId     String? @db.ObjectId // DOCTOR accounts only
+  doctorId     String? @db.ObjectId
   isActive     Boolean @default(true)
 }
 
-// Admin-editable system settings (single document), kept out of code like the screening criteria
 model SystemSetting {
   id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  maxActiveQueues     Int      @default(3) // queues one patient may hold at once, one per department
-  // D_j in P = B[L] + alpha * (W + D): head start in minutes for patients at higher risk while waiting
+  maxActiveQueues     Int      @default(3)
+
   ageBonusMinutes     Int      @default(30)
   chronicBonusMinutes Int      @default(15)
-  priorityAgeGroups   String[] @default(["60+"]) // Patient.ageGroup values that get ageBonusMinutes
+  priorityAgeGroups   String[] @default(["60+"])
 }

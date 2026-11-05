@@ -1,9 +1,5 @@
 "use client";
 
-// UC12 master data (ADMIN only). Screening criteria live here, never in code:
-// weights, red flags, onsite-only codes and the question set are all editable.
-// Records that may already be referenced are deactivated, not deleted.
-
 import { Building2, HeartPulse, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
@@ -70,8 +66,6 @@ function Check({ checked, onChange, children }: { checked: boolean; onChange: (v
   );
 }
 
-// ── departments ──
-
 function Departments() {
   const { state, update } = useMock();
   const [form, setForm] = useState({ code: "", name: "", scopeOfCare: "" });
@@ -130,8 +124,6 @@ function Departments() {
   );
 }
 
-// ── queue risk factors (D in P = B + α(W + D)) ──
-
 const AGE_GROUPS = ["0-5", "6-17", "18-59", "60+"];
 const BONUS_CHOICES = [0, 5, 10, 15, 20, 25, 30, 40];
 
@@ -139,7 +131,6 @@ function RiskSettings() {
   const { state, update } = useMock();
   const st = state.settings;
   const limit = maxSafeBonusMinutes();
-  // a choice is offered only if age + chronic stays below the narrowest level gap
   const allowed = (n: number, other: number) => n + other < limit;
   const set = (patch: Partial<typeof st>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
   const toggleAge = (g: string) =>
@@ -172,8 +163,6 @@ function RiskSettings() {
     </Card>
   );
 }
-
-// ── doctors ──
 
 function Doctors() {
   const { state, update } = useMock();
@@ -224,7 +213,6 @@ function Doctors() {
   );
 }
 
-/** Saved on blur so typing a link does not rewrite the store on every key. */
 function MeetingUrlInput({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
   const [text, setText] = useState(value ?? "");
   return (
@@ -237,8 +225,6 @@ function MeetingUrlInput({ value, onSave }: { value: string | null; onSave: (v: 
     />
   );
 }
-
-// ── symptom codes ──
 
 const EMPTY_CODE = (): SymptomCode => ({ id: "", code: "", label: "", synonyms: [], departmentWeights: {}, isRedFlag: false, onsiteOnly: false, priorityHint: null, isActive: true });
 
@@ -363,8 +349,6 @@ function Codes() {
   );
 }
 
-// ── questions ──
-
 function Questions() {
   const { state, update } = useMock();
   const { code } = useLookups();
@@ -454,8 +438,6 @@ function Questions() {
   );
 }
 
-// ── users ──
-
 const EMPTY_USER = { username: "", password: "", role: "STAFF" as Role, departmentId: "", doctorId: "" };
 
 function Users() {
@@ -474,9 +456,7 @@ function Users() {
     if (form.password.length < 8) return setErr("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
     const isDoctor = form.role === "DOCTOR";
     if (isDoctor && !form.doctorId) return setErr("บัญชีแพทย์ต้องเลือกรายชื่อแพทย์ที่ใช้บัญชีนี้");
-    // a doctor account belongs to the doctor's own department
     const departmentId = isDoctor ? doctorMap.get(form.doctorId)!.departmentId : form.departmentId || null;
-    // Mock: the password is not stored. The real API hashes it with bcrypt before saving.
     update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId, doctorId: isDoctor ? form.doctorId : null, isActive: true }));
     setForm(EMPTY_USER);
     setErr(null);

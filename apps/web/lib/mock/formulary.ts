@@ -1,15 +1,9 @@
-// Mock drug list for the prescription picker (UC09). Names and default directions only:
-// stock and dispensing are out of scope. Demo values, not a clinical reference —
-// a real deployment would load the hospital's own formulary.
-
 export type Drug = {
   name: string;
   unit: string;
   dosage: string;
-  /** units per day for a regular dose; null = as needed, so quantity is fixedQty */
   perDay: number | null;
   fixedQty?: number;
-  /** department codes that see this drug among the suggestions */
   depts: string[];
   keywords?: string;
 };
@@ -38,7 +32,6 @@ export const FORMULARY: Drug[] = [
   { name: "Fluticasone nasal spray", unit: "ขวด", dosage: "พ่นจมูกข้างละ 2 ครั้ง วันละ 1 ครั้ง", perDay: null, fixedQty: 1, depts: ["ENT"], keywords: "พ่นจมูก ภูมิแพ้" },
 ];
 
-/** Common directions offered while typing, so a custom drug rarely needs a full sentence. */
 export const SIG_PRESETS = [
   "1 เม็ด วันละ 1 ครั้ง หลังอาหารเช้า",
   "1 เม็ด เช้า-เย็น หลังอาหาร",
@@ -54,7 +47,6 @@ export function findDrug(name: string) {
   return FORMULARY.find((d) => d.name.toLowerCase() === name.trim().toLowerCase());
 }
 
-/** Quantity that covers the supply: regular doses scale with the days, as-needed ones do not. */
 export function quantityFor(drug: Drug, days: number) {
   return `${drug.perDay ? drug.perDay * Math.max(days, 1) : drug.fixedQty ?? 1} ${drug.unit}`;
 }

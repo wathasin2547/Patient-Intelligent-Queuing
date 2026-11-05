@@ -1,14 +1,3 @@
-"""Queueing-theory reading of the Kaggle dataset and the preliminary experiments (thesis §3 data analysis).
-
-    python -m scripts.queueing_analysis --kaggle "../../../docs/datasets/kaggle/Hospital Wait  TIme Data.csv"
-    python -m scripts.queueing_analysis --validate   # simulator vs M/M/c and M/G/c formulas
-    python -m scripts.queueing_analysis --load       # baseline vs PIQ at several utilizations
-    python -m scripts.queueing_analysis --alpha      # alpha sweep at rho = 0.85
-    python -m scripts.queueing_analysis --risk       # with vs without D_j at rho = 0.85
-
-The Kaggle CSV stays in docs/datasets (MIT licence); this script only reads it from the given path.
-"""
-
 import argparse
 import csv
 import random
@@ -17,6 +6,7 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import replace
 
+from triage import multi_queue_sim
 from triage.queueing import NO_BONUS
 from triage.simulation import (
     BASELINE,
@@ -66,7 +56,6 @@ def kaggle(path: str) -> None:
 
 
 def long_run(lam: float, doctors: int, f: Features, runs: int, exponential: bool) -> list[float]:
-    """One department, FCFS, no nurse desk, no call delay, 400 h: the steady state the formulas describe."""
     s, sd = SimConfig().consult_minutes
     cfg = SimConfig(arrivals_per_hour=lam, arrival_hours=400, dept_mix={"MED": 1.0},
                     doctors=[("MED", 8, 1000)] * doctors, appointment_prob=0.0, online_uptake=0.0)
@@ -105,7 +94,6 @@ def fmt(values: list[float]) -> str:
 
 
 def bottleneck_rho(cfg: SimConfig) -> float:
-    """Utilization of the busiest department (internal medicine: 50% of patients, 2 doctors)."""
     s = cfg.consult_minutes[0]
     return max(utilization(cfg.arrivals_per_hour * share, s, sum(d == dept for d, _, _ in cfg.doctors))
                for dept, share in cfg.dept_mix.items())
@@ -130,6 +118,31 @@ def report(results: dict[str, list[dict]]) -> None:
               + " ".join(f"{c:>14s}" for c in cells) + f" {risk:5.1f}/{other:5.1f}")
 
 
+def multi_queue(runs: int) -> None:
+    base = multi_queue_sim.experiment_config(SimConfig())
+
+    def cell(r, key, scale=1.0):
+        m, h = r[key]
+        return f"{m * scale:6.1f} ±{h * scale:4.1f}"
+
+    for share, rhos in ((0.2, (0.5, 0.7, 0.85)), (0.1, (0.85,)), (0.3, (0.85,))):
+        for rho in rhos:
+            cfg = multi_queue_sim.at_rho(base, rho, share)
+            r = multi_queue_sim.compare_policies(cfg, share, runs)
+            print(f"\n== two-department share {share:.0%} · rho {rho} · {cfg.arrivals_per_hour:.1f} patients/h "
+                  f"· about {r['multiPatients'][0]:.0f} such patients/day · {runs} runs ==")
+            print(f"{'':30s} {'one at a time':>14s} {'at once':>14s} {'difference':>14s}")
+            for label, name, scale in (
+                ("two-dept: time in hospital", "multiHospital", 1.0),
+                ("two-dept: finished today %", "multiFinished", 100.0),
+                ("single: mean wait", "singleMean", 1.0),
+                ("single: P90 wait", "singleP90", 1.0),
+                ("single: max wait", "singleMax", 1.0),
+            ):
+                print(f"{label:30s} {cell(r, name + 'Sequential', scale):>14s} "
+                      f"{cell(r, name + 'Parallel', scale):>14s} {cell(r, name + 'Diff', scale):>14s}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--kaggle")
@@ -137,6 +150,7 @@ def main() -> None:
     parser.add_argument("--load", action="store_true")
     parser.add_argument("--alpha", action="store_true")
     parser.add_argument("--risk", action="store_true")
+    parser.add_argument("--multi", action="store_true")
     parser.add_argument("--runs", type=int, default=50)
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
@@ -169,6 +183,8 @@ def main() -> None:
         results.update(run_replications(c, {"PIQ มี D (30/15 นาที)": PIQ}, args.runs))
         print(f"risk bonus · rho 0.85 · {args.runs} runs")
         report(results)
+    if args.multi:
+        multi_queue(args.runs)
 
 
 if __name__ == "__main__":

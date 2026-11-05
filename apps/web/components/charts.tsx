@@ -31,7 +31,6 @@ export function HBarChart({ data, unit }: { data: BarDatum[]; unit: string }) {
   );
 }
 
-/** Columns over time; the highlighted column (current hour) is navy with its value pinned above. */
 export function ColumnChart({ data, highlight, unit }: { data: BarDatum[]; highlight?: string; unit: string }) {
   const top = Math.max(...data.map((d) => d.value), 1);
   const ceil = niceCeil(top);
@@ -49,7 +48,6 @@ export function ColumnChart({ data, highlight, unit }: { data: BarDatum[]; highl
             return (
               <div key={d.key} className="group relative flex h-full flex-1 items-end justify-center">
                 {d.future ? (
-                  // not reached yet — an empty dashed slot, not a zero
                   <div className="h-full w-full max-w-8 rounded-full border border-dashed border-ink-3/40" />
                 ) : (
                   <div
@@ -84,7 +82,6 @@ function niceCeil(max: number): number {
   return Math.ceil(max / step) * step;
 }
 
-/** Composition of the waiting line by triage level: one capsule bar + a count per level. */
 export function LevelBreakdown({ counts }: { counts: { level: Level; value: number }[] }) {
   const total = counts.reduce((s, c) => s + c.value, 0);
   return (

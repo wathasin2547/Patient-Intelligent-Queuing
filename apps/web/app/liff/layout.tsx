@@ -1,8 +1,5 @@
 "use client";
 
-// LIFF pages open inside LINE. On desktop they are shown in a phone-sized frame.
-// UC02 for patients: LINE identifies the user automatically — the mock lets you switch test users.
-
 import { ChevronLeft, House, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,7 +18,6 @@ const REAL = process.env.NEXT_PUBLIC_DATA_MODE === "real";
 export default function LiffLayout({ children }: { children: React.ReactNode }) {
   const { state, update } = useMock();
   const pathname = usePathname();
-  // patients registered through /liff/register during this demo
   const fresh = state.patients.filter((p) => p.lineUserId.startsWith(LIFF_USER_PREFIX));
   const options = [...DEMO_USERS, ...fresh.map((p) => ({ id: p.id, label: `${p.fullName} — ลงทะเบียนใหม่` }))];
 

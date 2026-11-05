@@ -1,7 +1,3 @@
-// MOCK DATA ONLY — every patient here is made up ("ผู้ป่วยทดสอบ NN"). No real records.
-// Departments, symptom codes, questions and doctors come from code/data/catalog.json
-// (same source as prisma/seed.ts), plus the general-practice department added on 2026-10-20.
-
 import catalog from "../../../../data/catalog.json";
 import { APPOINTMENT_LEVEL, NO_SHOW_MINUTES } from "./logic";
 import { addDays, atBkk, bkkDate, MINUTE } from "./time";
@@ -12,15 +8,12 @@ import type {
 
 export const MOCK_VERSION = 9;
 
-/** Mock fallback consultation minutes per department, used by the ETA until real averages exist. */
-const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10 };
-/** The demo always opens at 10:30 Bangkok time so doctors are on shift whenever you run it. */
+const SERVICE_MINUTES: Record<string, number> = { MED: 12, SURG: 15, PED: 10, ENT: 10, GEN: 8 };
 export const DEMO_START = "10:30";
 
 type DeptKey = "MED" | "SURG" | "PED" | "ENT" | "GEN";
 const deptId = (k: string) => `dept_${k}`;
 
-// Small deterministic RNG so every reset produces the same morning.
 function rng(seed: number) {
   return () => {
     seed = (seed + 0x6d2b79f5) | 0;
@@ -37,16 +30,14 @@ export function buildSeed(realNow: number): MockState {
   const at = (hhmm: string, day = today) => atBkk(day, hhmm);
   const rand = rng(20261021);
 
-  // ── master data ──
   const departments: Department[] = [
     ...catalog.departments.map((d) => ({ id: deptId(d.key), code: d.key === "SURG" ? "SUR" : d.key, name: d.name, scopeOfCare: d.scopeOfCare, defaultServiceMinutes: SERVICE_MINUTES[d.key] ?? 10, isActive: true })),
-    { id: deptId("GEN"), code: "GEN", name: "เวชปฏิบัติทั่วไป", scopeOfCare: "อาการที่ยังจำแนกแผนกไม่ได้ หรือไม่ได้คะแนนจากแผนกใด", defaultServiceMinutes: 8, isActive: true },
   ];
 
   const doctors: Doctor[] = [];
   const doctorHours: Record<string, [number, number]> = {};
   const perDept: Record<string, number> = {};
-  for (const d of [...catalog.doctors, { name: "แพทย์ทดสอบ เวชปฏิบัติ 1", dept: "GEN", startHour: 8, endHour: 16 }]) {
+  for (const d of catalog.doctors) {
     perDept[d.dept] = (perDept[d.dept] ?? 0) + 1;
     const id = `doc_${d.dept}${perDept[d.dept]}`;
     doctors.push({ id, name: d.name, departmentId: deptId(d.dept), meetingUrl: `https://meet.example.com/piq-${id.slice(4).toLowerCase()}` });
@@ -85,12 +76,11 @@ export function buildSeed(realNow: number): MockState {
     { id: "u_doc_surg1", username: "doc.surg1", role: "DOCTOR", departmentId: deptId("SURG"), doctorId: doc("SURG"), isActive: true },
   ];
 
-  // ── shifts: 7 days starting today ──
   const shifts: Shift[] = [];
   for (let day = 0; day < 7; day++) {
     const date = addDays(today, day);
     for (const d of doctors) {
-      if (day === 3 && d.departmentId === deptId("SURG")) continue; // surgery off one day
+      if (day === 3 && d.departmentId === deptId("SURG")) continue;
       const [s, e] = doctorHours[d.id];
       shifts.push({
         id: `sh_${d.id}_${day}`,
@@ -103,7 +93,6 @@ export function buildSeed(realNow: number): MockState {
     }
   }
 
-  // ── patients / screenings / queues ──
   const patients: Patient[] = [];
   const screenings: Screening[] = [];
   const queues: Queue[] = [];
@@ -153,7 +142,7 @@ export function buildSeed(realNow: number): MockState {
   type Visit = {
     pt: number;
     dept: DeptKey;
-    algoDept?: DeptKey; // set when staff already moved the patient
+    algoDept?: DeptKey;
     doctor: string;
     level: Level;
     algoLevel?: Level;
@@ -222,7 +211,6 @@ export function buildSeed(realNow: number): MockState {
     return q;
   }
 
-  // Finished visits from 08:00 so the dashboard has a morning to chart.
   const HISTORY: { dept: DeptKey; doctor: string; codes: string[]; chief: string }[] = [
     { dept: "MED", doctor: doc("MED", 1), codes: ["fever", "cough"], chief: "มีไข้" },
     { dept: "MED", doctor: doc("MED", 2), codes: ["headache"], chief: "ปวดศีรษะ / เวียนศีรษะ" },
@@ -254,7 +242,6 @@ export function buildSeed(realNow: number): MockState {
     });
   }
 
-  // Patients in the building right now (same scenarios as the earlier mockup).
   const Q_AGE = "ผู้ป่วยอายุเท่าไร";
   const Q_CHIEF = "วันนี้มาด้วยอาการหลักอะไร";
   visit({ pt: 12, dept: "MED", doctor: doc("MED", 1), level: 4, status: "IN_PROGRESS", checkIn: ago(38), called: ago(6),
@@ -291,7 +278,6 @@ export function buildSeed(realNow: number): MockState {
   visit({ pt: 19, dept: "GEN", doctor: doc("GEN"), level: 4, status: "WAITING", checkIn: ago(11),
     answers: [[Q_AGE, "18-59 ปี"], [Q_CHIEF, "อื่น ๆ"]], freeText: "รู้สึกไม่ค่อยสบาย อ่อนเพลีย", closedCodes: [], llmCodes: [], llmStatus: "ok" });
 
-  // Red flag at 10:12 — screening only, no queue (UC04 exception 1).
   const redPid = patient(20, { ageGroup: "60+" });
   screenings.push({
     id: "scr_red_1", patientId: redPid,
@@ -301,7 +287,6 @@ export function buildSeed(realNow: number): MockState {
     reason: [], createdAt: ago(18),
   });
 
-  // ── appointments (UC11) ──
   const appointments: Appointment[] = [];
   const appt = (pt: number, doctorId: string, time: string, reason: string, status: Appointment["status"], day = today): Appointment => {
     const a: Appointment = {
@@ -319,14 +304,11 @@ export function buildSeed(realNow: number): MockState {
   appt(25, doc("PED"), "13:30", "ติดตามอาการหอบ", "SCHEDULED");
   appt(26, doc("ENT"), "09:30", "ติดตามอาการหูชั้นกลางอักเสบ", "SCHEDULED", addDays(today, 1));
   appt(22, doc("MED", 2), "14:00", "ติดตามความดันโลหิต", "SCHEDULED", addDays(today, 7));
-  // pt_01 arrived early (10:20) for a 10:40 appointment → W counts from 10:40
   visit({ pt: 1, dept: "MED", doctor: doc("MED", 1), level: APPOINTMENT_LEVEL, status: "WAITING", checkIn: ago(10),
     answers: [], closedCodes: [], appointmentId: arrived.id });
-  // Multi-queue demo: pt_01 also reported a sore throat in the chat, so they wait for ENT and MED at once.
   visit({ pt: 1, dept: "ENT", doctor: doc("ENT"), level: 4, status: "WAITING", checkIn: ago(18),
     answers: [[Q_AGE, "60 ปีขึ้นไป"], [Q_CHIEF, "เจ็บคอ"]], freeText: "เจ็บคอ กลืนลำบากมา 3 วัน", closedCodes: ["sore_throat"], llmCodes: ["sore_throat"], llmStatus: "ok" });
 
-  // pt_01 also saw a doctor yesterday and still has to choose how to get the medicine (UC06).
   const yesterday = addDays(today, -1);
   const yQueue: Queue = {
     id: "q_yesterday_1", patientId: "pt_01", screeningId: null, appointmentId: null, departmentId: deptId("MED"),

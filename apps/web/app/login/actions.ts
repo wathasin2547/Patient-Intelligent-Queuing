@@ -11,7 +11,6 @@ export type LoginState = {
   error?: string;
 };
 
-/** UC02: validate with Zod, then let NextAuth check the password against the User collection. */
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const raw = { username: formData.get("username"), password: formData.get("password") };
   const parsed = loginSchema.safeParse(raw);
@@ -21,7 +20,6 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   }
 
   try {
-    // /staff sends each role on to its own home (proxy.ts)
     await signIn("credentials", { ...parsed.data, redirectTo: safeCallback(formData.get("callbackUrl")) });
     return {};
   } catch (e) {
@@ -32,15 +30,14 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
         error: suspended ? "บัญชีนี้ถูกระงับ กรุณาติดต่อผู้ดูแลระบบ" : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
       };
     }
-    throw e; // the redirect after a successful sign-in is thrown too
+    throw e;
   }
 }
 
-/** Keep only the path, and only under /staff, so the login form cannot be used as an open redirect. */
 function safeCallback(value: FormDataEntryValue | null): string {
   if (typeof value !== "string" || !value) return "/staff";
   try {
-    const url = new URL(value, "http://piq.local"); // relative or absolute, the host is dropped
+    const url = new URL(value, "http://piq.local");
     return url.pathname.startsWith("/staff") ? url.pathname + url.search : "/staff";
   } catch {
     return "/staff";

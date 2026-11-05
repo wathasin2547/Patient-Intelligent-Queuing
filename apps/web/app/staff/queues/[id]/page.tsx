@@ -1,7 +1,5 @@
 "use client";
 
-// UC08 review/edit the screening result (staff) + UC09 record the exam result (doctor).
-
 import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, Forward, Layers, MessageSquareText, Pill, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -26,7 +24,6 @@ export default function QueueDetailPage() {
   const { state } = useMock();
   const { me, isDoctor } = useMe();
   const q = state.queues.find((x) => x.id === id);
-  // a doctor sees only the patients assigned to them
   const message = !q ? "ไม่พบคิวนี้" : isDoctor && q.doctorId !== me?.doctorId ? "คิวนี้ไม่ได้อยู่ในความรับผิดชอบของคุณ" : null;
   if (!q || message) {
     return (
@@ -36,7 +33,6 @@ export default function QueueDetailPage() {
       </div>
     );
   }
-  // key: reset the forms when another queue is opened
   return <QueueDetail key={q.id} q={q} />;
 }
 
@@ -144,7 +140,6 @@ function QueueDetail({ q }: { q: Queue }) {
   );
 }
 
-/** The same patient's other queues today: shows staff and doctors when a patient is held elsewhere. */
 function OtherQueuesCard({ q }: { q: Queue }) {
   const { state, now } = useMock();
   const { dept } = useLookups();
@@ -166,7 +161,6 @@ function OtherQueuesCard({ q }: { q: Queue }) {
               <StatusChip status={x.status} />
             </>
           );
-          // a doctor may open only their own patients' queues
           return (
             <li key={x.id}>
               {isDoctor ? (
@@ -182,7 +176,6 @@ function OtherQueuesCard({ q }: { q: Queue }) {
   );
 }
 
-/** UC09 alternate flow: send the patient to another department today instead of another day. */
 function ReferCard({ q }: { q: Queue }) {
   const { state, update } = useMock();
   const options = state.departments.filter((d) => d.isActive && d.id !== q.departmentId);

@@ -1,9 +1,5 @@
 "use client";
 
-// UC09 exam result form for the doctor. Built to avoid typing: repeat the last
-// prescription, pick from frequent drugs, or search the formulary; directions and
-// quantity fill in by themselves and the quantity follows the number of days.
-
 import { History, Pill, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 import { btn, Card } from "@/components/ui";
@@ -13,7 +9,6 @@ import { useLookups, useMock } from "@/lib/mock/store";
 import { fmtShortDate } from "@/lib/mock/time";
 import type { Queue } from "@/lib/mock/types";
 
-/** auto = quantity still follows the days; it stops once the doctor edits it by hand */
 type Line = { name: string; dosage: string; quantity: string; drug: Drug | null; auto: boolean };
 
 const toLine = (drug: Drug, days: number): Line => ({ name: drug.name, dosage: drug.dosage, quantity: quantityFor(drug, days), drug, auto: true });
@@ -28,11 +23,9 @@ export function PrescriptionForm({ q }: { q: Queue }) {
   const added = new Set(lines.map((l) => l.name));
   const matches = searchDrugs(query, added);
 
-  // the patient's most recent prescription from another visit (chronic follow-ups repeat it)
   const myQueueIds = new Set(state.queues.filter((x) => x.patientId === q.patientId && x.id !== q.id).map((x) => x.id));
   const lastRx = state.prescriptions.filter((r) => myQueueIds.has(r.queueId)).sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))[0];
 
-  // what this doctor prescribes most, then drugs tagged for the department
   const doctorQueueIds = new Set(state.queues.filter((x) => x.doctorId === q.doctorId).map((x) => x.id));
   const counts = new Map<string, number>();
   for (const r of state.prescriptions) if (doctorQueueIds.has(r.queueId)) for (const i of r.items) counts.set(i.name, (counts.get(i.name) ?? 0) + 1);
@@ -61,7 +54,6 @@ export function PrescriptionForm({ q }: { q: Queue }) {
   function repeatLast() {
     if (!lastRx) return;
     setDays(lastRx.daysSupply);
-    // keep last time's directions; quantities of known drugs keep following the days
     setLines(lastRx.items.map((i) => {
       const drug = findDrug(i.name) ?? null;
       return { ...i, drug, auto: drug !== null };

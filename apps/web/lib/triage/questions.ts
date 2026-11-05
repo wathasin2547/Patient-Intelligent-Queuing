@@ -4,7 +4,6 @@ import type { LineTextMessage } from "@/lib/line/client";
 export type Answer = { questionId: string; optionIndex: number };
 type Option = { label: string; symptomCode: string | null };
 
-// รูปแบบในปุ่ม: "id:0,id:2"
 export function encodeAnswers(a: Answer[]): string {
   return a.map((x) => `${x.questionId}:${x.optionIndex}`).join(",");
 }
@@ -20,7 +19,6 @@ export function decodeAnswers(s: string | null): Answer[] {
     .filter((x) => x.questionId && Number.isInteger(x.optionIndex));
 }
 
-// dependsOn: null = ถามเสมอ, {symptomCode: "fever"} = ถามเมื่อเคยเลือกอาการนี้
 function matches(dependsOn: unknown, codes: Set<string>): boolean {
   if (!dependsOn) return true;
   const want = (dependsOn as { symptomCode?: string | string[] }).symptomCode;
@@ -28,7 +26,6 @@ function matches(dependsOn: unknown, codes: Set<string>): boolean {
   return (Array.isArray(want) ? want : [want]).some((c) => codes.has(c));
 }
 
-// หาคำถามข้อถัดไป (คืน null = ถามครบแล้ว)
 export async function findNextQuestion(answers: Answer[]) {
   const all = await prisma.question.findMany({
     where: { isActive: true },
@@ -47,7 +44,6 @@ export async function findNextQuestion(answers: Answer[]) {
   return all.find((q) => !done.has(q.id) && matches(q.dependsOn, codes)) ?? null;
 }
 
-// Red flag answered -> stop asking and triage right away (red flags are checked before anything else)
 export async function answeredRedFlag(answers: Answer[]): Promise<boolean> {
   const qs = await prisma.question.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
   const byId = new Map(qs.map((q) => [q.id, q]));
@@ -59,7 +55,6 @@ export async function answeredRedFlag(answers: Answer[]): Promise<boolean> {
   return red > 0;
 }
 
-// สร้างข้อความคำถาม + ปุ่ม โดยแต่ละปุ่มพกคำตอบเดิม + คำตอบใหม่ไปด้วย
 export function buildQuestionMessage(
   q: { id: string; questionText: string; options: unknown },
   answers: Answer[],

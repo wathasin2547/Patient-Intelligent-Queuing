@@ -5,12 +5,10 @@ import { authConfig } from "@/auth.config";
 import { loginSchema, ROLES, type Role } from "@/lib/auth/schema";
 import { prisma } from "@/lib/prisma";
 
-/** Right password but the admin suspended the account (UC12) — tell the user instead of a generic error. */
 export class SuspendedAccount extends CredentialsSignin {
   code = "suspended";
 }
 
-// Compared against when the username does not exist, so a wrong username takes as long as a wrong password.
 const DUMMY_HASH = bcrypt.hashSync("piq-unknown-user", 10);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({

@@ -16,7 +16,6 @@ export async function buildReply(event: LineEvent): Promise<LineMessage[] | null
 
   if (event.type === "message" && event.message?.type === "text") {
     if (event.message?.text?.trim() === "ตรวจ") {
-      // ถือคิวครบแล้ว ไม่ต้องให้ตอบคำถามจนจบก่อนค่อยบอก
       const lineUserId = event.source?.userId;
       const blocked = lineUserId ? await queueLimitFor(lineUserId) : null;
       if (blocked) return [{ type: "text", text: blockMessage(blocked) }];
@@ -39,14 +38,12 @@ export async function buildReply(event: LineEvent): Promise<LineMessage[] | null
     if (answers.length === 0) return null;
 
     try {
-      // เจออาการฉุกเฉินแล้วไม่ต้องถามต่อ ส่งคัดกรองทันที
       const next = (await answeredRedFlag(answers)) ? null : await findNextQuestion(answers);
       if (next) return [buildQuestionMessage(next, answers)];
 
       const result = await callTriage({ closedAnswers: answers });
       let text = await formatTriageResult(result);
 
-      // บันทึกลงฐานข้อมูล ถ้าบันทึกพัง ยังตอบผลคัดกรองให้คนไข้ตามปกติ
       const lineUserId = event.source?.userId;
       if (lineUserId) {
         try {

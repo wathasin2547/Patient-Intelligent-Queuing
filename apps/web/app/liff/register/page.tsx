@@ -1,7 +1,5 @@
 "use client";
 
-// UC01 register (first visit) — also used to edit the patient's own details later.
-
 import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,7 +17,6 @@ const COVERAGE = ["บัตรทอง", "ประกันสังคม", 
 
 export default function RegisterPage() {
   const { state } = useMock();
-  // remount when the demo switches LINE user so the form shows that user's data
   return <RegisterForm key={state.liffPatientId ?? "new"} />;
 }
 

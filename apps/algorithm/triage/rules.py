@@ -1,15 +1,8 @@
-"""Rule-based triage: red flag check, department scoring, priority level and online eligibility.
-
-Thesis chapter 3 §3.4.2-3.4.7 / SPEC.md §3. Every function here is pure: all criteria
-(weights, red flags, onsite-only, priority hints) come in as arguments loaded from the DB.
-Nothing in this module may call the LLM.
-"""
-
 from collections.abc import Callable, Iterable
 
 from .models import ClosedAnswer, Question, ReasonItem, SymptomCode, TriageInput
 
-Catalog = dict[str, SymptomCode]  # code -> SymptomCode
+Catalog = dict[str, SymptomCode]
 
 LEVEL_RED = 1
 LEVEL_GREEN = 4
@@ -30,7 +23,6 @@ def dedupe(codes: Iterable[str]) -> list[str]:
 def map_closed_answers(
     questions: dict[str, Question], answers: list[ClosedAnswer]
 ) -> tuple[list[str], list[str]]:
-    """Closed-ended answers -> symptom codes. Returns (codes, warnings)."""
     codes, warnings = [], []
     for a in answers:
         q = questions.get(a.question_id)
@@ -47,7 +39,6 @@ def map_closed_answers(
 
 
 def known_codes(codes: Iterable[str], catalog: Catalog) -> list[str]:
-    """Drop anything not in the active catalog (also used to validate LLM output)."""
     return [c for c in codes if c in catalog]
 
 
@@ -58,7 +49,6 @@ def find_red_flags(codes: Iterable[str], catalog: Catalog) -> list[str]:
 def compute_department_scores(
     codes: Iterable[str], catalog: Catalog
 ) -> tuple[dict[str, float], list[ReasonItem]]:
-    """S_d = sum(w[i][d] * a[i]) — eq. 3.1. Also returns each code's contribution."""
     scores: dict[str, float] = {}
     contributions = []
     for c in codes:
@@ -73,7 +63,6 @@ def compute_department_scores(
 def pick_department(
     scores: dict[str, float], tie_breaker: Callable[[list[str]], str]
 ) -> str | None:
-    """Highest score wins; ties are resolved by tie_breaker (shorter average wait)."""
     positive = {d: s for d, s in scores.items() if s > 0}
     if not positive:
         return None
@@ -83,14 +72,11 @@ def pick_department(
 
 
 def reason_for(department: str, contributions: list[ReasonItem]) -> list[ReasonItem]:
-    """Codes that pushed the chosen department, strongest first (CLAUDE.md rule 3)."""
     items = [r for r in contributions if r.department == department]
     return sorted(items, key=lambda r: (-r.weight, r.code))
 
 
 def compute_priority_level(codes: Iterable[str], catalog: Catalog, inp: TriageInput) -> int:
-    """Table 3.x: red flag = 1, otherwise the most urgent priorityHint,
-    unchanged chronic follow-up = 5, everything else = 4."""
     codes = list(codes)
     if find_red_flags(codes, catalog):
         return LEVEL_RED
@@ -105,7 +91,6 @@ def compute_priority_level(codes: Iterable[str], catalog: Catalog, inp: TriageIn
 def check_online_eligible(
     codes: Iterable[str], catalog: Catalog, level: int, inp: TriageInput
 ) -> bool:
-    """All three conditions of §3.4.7 must hold. Only a suggestion — the patient may still come onsite."""
     if level not in ONLINE_LEVELS:
         return False
     if any(catalog[c].onsite_only for c in codes):

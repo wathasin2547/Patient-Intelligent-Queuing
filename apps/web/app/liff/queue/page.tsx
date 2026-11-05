@@ -1,9 +1,5 @@
 "use client";
 
-// UC05 track queue status (and cancel while still waiting).
-// A patient may hold queues in several departments at once: the page lists all of them,
-// ordered by when each is expected to be called, and says where to go first.
-
 import { BellRing, Footprints, Ticket, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -30,7 +26,6 @@ export default function QueueStatusPage() {
     .filter((q) => q.patientId === state.liffPatientId && bkkDate(q.checkInTime) === bkkDate(now))
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime));
   const eta = (q: Queue) => estimateCallTime(state, q, now);
-  // the queue being served first, then waiting ones by expected call time
   const active = mine
     .filter((q) => ACTIVE.includes(q.status))
     .sort((a, b) => Number(isCalledOrIn(b)) - Number(isCalledOrIn(a)) || (eta(a) ?? Infinity) - (eta(b) ?? Infinity));
@@ -82,7 +77,6 @@ export default function QueueStatusPage() {
   );
 }
 
-/** Big card: the queue that matters right now (called / in the room, or the next one expected). */
 function MainCard({ q }: { q: Queue }) {
   const { state, now, update } = useMock();
   const { dept, doctor } = useLookups();
@@ -162,7 +156,6 @@ function MainCard({ q }: { q: Queue }) {
   );
 }
 
-/** Compact card for the patient's other queues. */
 function SideCard({ q }: { q: Queue }) {
   const { state, now, update } = useMock();
   const { dept } = useLookups();

@@ -1,9 +1,5 @@
 "use client";
 
-// Client-side mock store shared by the staff web app, the LIFF pages and the call display.
-// State lives in a module-level store and is mirrored to localStorage so other tabs
-// (e.g. /display) stay in sync. Replace `update(...)` calls with fetches to /api/* once the DB is ready.
-
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import { runAutoCall } from "./logic";
 import { buildSeed, MOCK_VERSION } from "./seed";
@@ -33,7 +29,6 @@ function load(): MockState {
       if (s.version === MOCK_VERSION) return s;
     }
   } catch {
-    // private window or blocked storage: fall back to a fresh seed
   }
   return buildSeed(Date.now());
 }
@@ -42,7 +37,6 @@ function save(s: MockState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   } catch {
-    // ignore — the demo still works in memory
   }
 }
 
@@ -54,12 +48,10 @@ function publish(s: MockState, persist = true) {
   listeners.forEach((l) => l());
 }
 
-/** Every change goes through UC13 auto-calling, so a freed doctor is always served. */
 function commit(s: MockState) {
   publish(useReal ? s : runAutoCall(s, simNow(s)));
 }
 
-// ดึงข้อมูลล่าสุดจาก DB แล้วแทนที่ state ฝั่งหน้าเว็บ (ค่าที่เป็นของเบราว์เซอร์เองยังเก็บไว้ตามเดิม)
 async function pull() {
   try {
     const res = await fetch("/api/state", { cache: "no-store" });
@@ -68,12 +60,9 @@ async function pull() {
     const prev = snapshot?.state;
     publish({ ...fresh, liffPatientId: prev?.liffPatientId ?? null, acknowledgedRedFlags: prev?.acknowledgedRedFlags ?? [] }, false);
   } catch {
-    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
   }
 }
 
-// ส่งคิวที่เปลี่ยนสถานะ/เวลาไปบันทึกที่เซิร์ฟเวอร์ แล้วดึงข้อมูลจริงกลับมาทับ
-// ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น แพทย์กำลังตรวจอยู่) จะแจ้งเตือน และหน้าจอย้อนกลับเป็นค่าจริงเอง
 async function sync(before: MockState, after: MockState) {
   const old = new Map(before.queues.map((q) => [q.id, q]));
   const changes = after.queues
@@ -105,7 +94,7 @@ async function initLiff() {
     const { default: liff } = await import("@line/liff");
     await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID ?? "" });
     if (!liff.isLoggedIn()) {
-      liff.login(); // เปิดนอกแอป LINE จะพาไปหน้าล็อกอินของ LINE ก่อน
+      liff.login();
       return;
     }
     liffToken = liff.getAccessToken();
@@ -123,7 +112,6 @@ async function pullLiff() {
       headers: { Authorization: `Bearer ${liffToken}` },
     });
     if (res.status === 401) {
-      // token หมดอายุหรือไม่ถูกต้อง ให้ล็อกอินใหม่เพื่อขอ token ใหม่
       liffToken = null;
       const { default: liff } = await import("@line/liff");
       liff.login();
@@ -132,7 +120,6 @@ async function pullLiff() {
     if (!res.ok) return;
     publish((await res.json()) as MockState, false);
   } catch {
-    // เน็ตหลุดชั่วคราว รอบถัดไปลองใหม่
   }
 }
 
@@ -158,7 +145,6 @@ function start() {
     try {
       publish(JSON.parse(e.newValue) as MockState, false);
     } catch {
-      // ignore malformed writes from other tabs
     }
   });
 }
@@ -209,7 +195,6 @@ export function useMock(): Ctx {
   return ctx;
 }
 
-/** Convenience lookups used across pages. */
 export function useLookups() {
   const { state } = useMock();
   return useMemo(() => {

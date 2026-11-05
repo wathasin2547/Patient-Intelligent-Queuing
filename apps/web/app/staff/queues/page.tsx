@@ -1,8 +1,5 @@
 "use client";
 
-// UC10 Queue Management + UC13 calling patients — what staff see of the system-run queue.
-// Staff do not pick who goes next: the system calls the highest-P patient when a doctor is free.
-
 import { Hourglass, MessageCircle, Megaphone, Search, UserX, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -77,7 +74,6 @@ function QueuesBoard() {
         <Segmented value={dept} onChange={setDept} options={[{ value: "ALL", label: "ทุกแผนก" }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
       </div>
 
-      {/* test tool, not part of the real workflow: neutral card with a dashed edge so it reads as "dev" */}
       <section className="mb-5 rounded-card border-2 border-dashed border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
