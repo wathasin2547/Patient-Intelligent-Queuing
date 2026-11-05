@@ -19,7 +19,6 @@ def test_every_patient_is_accounted_for():
 
 
 def test_no_one_seen_by_a_doctor_off_shift():
-    # ENT works 08:00-12:00: nobody arriving after 12:00 should be queued for ENT
     patients = [p for p in generate_patients(CFG, 2) if p.dept == "ENT" and p.arrival > 240]
     out = simulate(CFG, patients, PIQ, 2)
     assert all(o.start is None or o.online for o in out)

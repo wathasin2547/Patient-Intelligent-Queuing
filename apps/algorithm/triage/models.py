@@ -1,5 +1,3 @@
-"""Plain data types used by the triage rules. Field names follow SPEC.md §2."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -9,7 +7,7 @@ class SymptomCode:
     code: str
     label: str
     synonyms: list[str]
-    department_weights: dict[str, float]  # departmentId -> weight
+    department_weights: dict[str, float]
     is_red_flag: bool = False
     onsite_only: bool = False
     priority_hint: int | None = None
@@ -45,9 +43,9 @@ class WaitingQueue:
     doctor_id: str | None
     priority_level: int
     check_in_time: datetime
-    patient_id: str = ""  # one patient may wait in several departments at once
-    age_group: str | None = None  # Patient.ageGroup: "0-5" | "6-17" | "18-59" | "60+"
-    is_chronic: bool = False  # Patient.isChronic: has a chronic (underlying) disease
+    patient_id: str = ""
+    age_group: str | None = None
+    is_chronic: bool = False
 
 
 @dataclass(frozen=True)
@@ -75,7 +73,7 @@ class ReasonItem:
 class TriageResult:
     symptom_codes: list[str]
     llm_codes: list[str]
-    llm_status: str  # "ok" | "skipped" | "failed"
+    llm_status: str
     is_red_flag: bool
     red_flag_codes: list[str]
     department_scores: dict[str, float]
@@ -83,7 +81,6 @@ class TriageResult:
     priority_level: int
     online_eligible: bool
     reason: list[ReasonItem]
-    # Shift check and doctor assignment (report §3.4 steps 9-10)
     doctor_id: str | None = None
     queue_score: float | None = None
     no_doctor_on_shift: bool = False

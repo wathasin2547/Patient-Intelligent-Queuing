@@ -21,11 +21,6 @@ const NAV: { href: string; label: string; uc: string; icon: LucideIcon; roles: R
   { href: "/staff/master", label: "ข้อมูลพื้นฐาน", uc: "UC12", icon: SlidersHorizontal, roles: ["ADMIN"] },
 ];
 
-/**
- * Who is signed in comes from NextAuth (the server layout passes it in) and is the authority for role checks.
- * The pages still run on the browser mock store, so the matching mock user (same username) is made the
- * mock session — remove this bridge once the pages read the database.
- */
 export default function StaffShell({ user: sessionUser, logout, children }: { user: SessionUser; logout: () => Promise<void>; children: React.ReactNode }) {
   const { state, now, update, advance, reset } = useMock();
   const router = useRouter();
@@ -38,7 +33,7 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
   }, [mockUser, state.sessionUserId, update]);
 
   useEffect(() => {
-    if (!ok) router.replace(homeOf(sessionUser.role)); // proxy.ts already redirects; this covers client navigation
+    if (!ok) router.replace(homeOf(sessionUser.role));
   }, [ok, router, sessionUser.role]);
 
   if (!ok) return null;
@@ -54,7 +49,6 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
 
   return (
     <div className="flex min-h-screen">
-      {/* Navy sidebar: white text 17.7:1, inactive items white/75 (9.9:1). */}
       <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col bg-brand px-4 py-7 text-white lg:flex">
         <Link href={home} className="flex items-center gap-3 rounded-xl px-2 py-1 hover:bg-white/5">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cta text-ink ring-1 ring-cta-edge">

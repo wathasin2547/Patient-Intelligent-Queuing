@@ -4,7 +4,6 @@ import { bkkDate } from "@/lib/mock/time";
 const COLLECTION = "QueueCounter";
 let indexReady: Promise<unknown> | null = null;
 
-// สร้าง unique index ให้ key (ทำครั้งเดียวต่อรอบที่เซิร์ฟเวอร์ทำงาน)
 function ensureIndex() {
   indexReady ??= prisma
     .$runCommandRaw({
@@ -18,7 +17,6 @@ function ensureIndex() {
   return indexReady;
 }
 
-// ค่าที่ MongoDB ส่งกลับอาจเป็นเลขธรรมดา หรือ { $numberLong: "5" }
 function toNumber(v: unknown): number {
   if (typeof v === "number") return v;
   if (v && typeof v === "object") {
@@ -29,7 +27,6 @@ function toNumber(v: unknown): number {
   throw new Error("unexpected counter value");
 }
 
-// เลขสูงสุดที่ใช้ไปแล้ววันนี้ (กรณีมีคิวเก่าก่อนมีตัวนับ)
 async function highestToday(departmentId: string, day: string): Promise<number> {
   const startOfDay = new Date(new Date(`${day}T00:00:00Z`).getTime() - 7 * 3600_000);
   const rows = await prisma.queue.findMany({
@@ -46,13 +43,11 @@ export async function issueQueueNumber(departmentId: string): Promise<string> {
 
   await ensureIndex();
 
-  // 1) ถ้ายังไม่มีตัวนับของวันนี้ ให้สร้าง โดยเริ่มจากเลขสูงสุดที่ใช้ไปแล้ว
   await prisma.$runCommandRaw({
     update: COLLECTION,
     updates: [{ q: { key }, u: { $setOnInsert: { key, seq: await highestToday(departmentId, day) } }, upsert: true }],
   });
 
-  // 2) บวก 1 และเอาค่าใหม่คืนมา ในคำสั่งเดียว
   const res = (await prisma.$runCommandRaw({
     findAndModify: COLLECTION,
     query: { key },

@@ -1,13 +1,3 @@
-"""Waiting-time simulation for chapter 4 (thesis §3.7: waiting time + alpha experiments).
-
-    python -m scripts.simulate_queue                 # each mechanism on its own vs baseline
-    python -m scripts.simulate_queue --alpha         # sweep alpha (starvation vs urgency)
-    python -m scripts.simulate_queue --load          # Kaggle day (rho 0.48) up to rho 0.95
-    python -m scripts.simulate_queue --runs 100      # more replications (default 50)
-
-Every scenario uses the same simulated patients in each run, so differences come from the process.
-"""
-
 import argparse
 import sys
 from dataclasses import replace
@@ -53,7 +43,6 @@ def main() -> None:
     parser.add_argument("--load", action="store_true")
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
-    # the Kaggle arrival rate leaves the bottleneck at rho 0.48; compare mechanisms on a busy day
     cfg = at_rho(SimConfig(), 0.85)
 
     if args.alpha:

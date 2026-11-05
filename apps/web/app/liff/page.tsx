@@ -12,7 +12,6 @@ export default function LiffHome() {
   const { doctor, dept } = useLookups();
   const patient = state.patients.find((p) => p.id === state.liffPatientId);
 
-  // UC01 trigger: first visit from a LINE account the system does not know yet
   if (!patient) {
     return (
       <div className="flex flex-1 flex-col justify-end gap-4 p-5">
@@ -27,7 +26,6 @@ export default function LiffHome() {
   }
 
   const allActive = state.queues.filter((q) => q.patientId === patient.id && ACTIVE.includes(q.status));
-  // show the queue being served first; the rest are listed on the queue page
   const active = allActive.find(isCalledOrIn) ?? allActive[0];
   const ahead = active ? Math.max(0, (positionInLine(state, active, now) ?? 1) - 1) : 0;
   const rxIds = new Set(state.queues.filter((q) => q.patientId === patient.id).map((q) => q.id));

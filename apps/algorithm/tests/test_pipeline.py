@@ -19,15 +19,13 @@ def run(*answers, now=MORNING, waiting=None, extractor=None, **kw):
     return triage(inp(*(answer(r, o, l) for o, l in answers), **kw), r, now, extractor)
 
 
-# ── red flag ──
-
 def test_red_flag_stops_before_llm():
     llm = SpyLLM(["fever"])
     res = run(ADULT, (2, "เจ็บแน่นหน้าอกรุนแรง"), free_text="ไข้", extractor=llm)
     assert res.is_red_flag and res.priority_level == 1
     assert res.red_flag_codes == ["chest_pain_severe"]
     assert res.assigned_department is None and res.doctor_id is None
-    assert llm.calls == 0  # CLAUDE.md rule 2
+    assert llm.calls == 0
 
 
 def test_red_flag_from_llm_escalates():
@@ -35,8 +33,6 @@ def test_red_flag_from_llm_escalates():
               extractor=SpyLLM(["dyspnea_severe"]))
     assert res.is_red_flag and res.llm_codes == ["dyspnea_severe"]
 
-
-# ── LLM handling ──
 
 def test_llm_codes_outside_catalog_are_dropped():
     res = run(ADULT, NO_RED_FLAG, (3, "ไอ"), free_text="ไอ เป็นปอดบวม",
@@ -59,10 +55,7 @@ def test_no_free_text_skips_llm():
     assert llm.calls == 0 and res.llm_status == "skipped"
 
 
-# ── department + reason ──
-
 def test_scoring_picks_highest_and_explains_why():
-    # abdominal_pain_general MED 4 / SURG 2  +  abdominal_pain_rlq SURG 6 / MED 2
     res = run(ADULT, NO_RED_FLAG, (3, "ปวดท้อง"), (5, "ปวดท้องด้านขวาล่าง"))
     assert res.department_scores == {"MED": 6, "SURG": 8}
     assert res.assigned_department == "SURG"
@@ -75,7 +68,6 @@ def test_age_moves_child_to_pediatrics():
 
 
 def test_tie_goes_to_department_with_shorter_average_wait():
-    # back_pain: MED 2 / SURG 2
     r = repo()
     from triage.rules import compute_department_scores, pick_department
     scores, _ = compute_department_scores(["back_pain"], r.symptom_codes())
@@ -87,21 +79,18 @@ def test_tie_goes_to_department_with_shorter_average_wait():
 def test_nothing_scored_goes_to_general_practice():
     res = run(ADULT, NO_RED_FLAG)
     assert res.assigned_department == "GEN" and res.doctor_id == "GEN-1" and res.warnings
-    assert not res.online_eligible  # unknown case must not be sent home
+    assert not res.online_eligible
 
 
 def test_nothing_scored_without_fallback_department_needs_staff():
     r = repo()
-    r.fallback_department = lambda: None  # a DB seeded before GEN existed
+    r.fallback_department = lambda: None
     res = triage(inp(answer(r, *ADULT), answer(r, *NO_RED_FLAG)), r, MORNING)
     assert res.assigned_department is None and res.doctor_id is None
     assert not res.online_eligible
 
 
-# ── free text that was not read ──
-
 def test_unread_free_text_blocks_online():
-    # "ผื่นคัน" alone is online eligible, but the patient typed something nobody read
     for status in ("skipped", "failed"):
         res = run(ADULT, NO_RED_FLAG, (3, "ผื่นคัน"), free_text="หายใจไม่ทัน",
                   extractor=SpyLLM([], status=status))
@@ -112,8 +101,6 @@ def test_free_text_read_keeps_online():
     res = run(ADULT, NO_RED_FLAG, (3, "ผื่นคัน"), free_text="คันมาก", extractor=SpyLLM([]))
     assert res.online_eligible
 
-
-# ── priority + online ──
 
 def test_priority_uses_most_urgent_hint():
     res = run(ADULT, NO_RED_FLAG, (3, "ปวดท้อง"), (5, "ปวดรุนแรงจนเดินไม่ไหว"))
@@ -142,13 +129,11 @@ def test_changed_chronic_follow_up_must_come_onsite():
     assert res.priority_level == 4 and not res.online_eligible
 
 
-# ── shift + doctor ──
-
 def test_doctor_with_fewer_waiting_patients_gets_the_case():
     waiting = [queue("a", 4, 10, doctor="MED-1"), queue("b", 4, 5, doctor="MED-1")]
     res = run(ADULT, NO_RED_FLAG, (3, "ไอ"), waiting=waiting)
     assert res.doctor_id == "MED-2"
-    assert res.queue_score == 300  # B[4] with W = 0
+    assert res.queue_score == 300
 
 
 def test_no_doctor_on_shift_returns_next_round():

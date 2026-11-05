@@ -1,5 +1,3 @@
-"""Run case vignettes through the pipeline and score them (thesis §3.7, experiments 1, 3 and 5)."""
-
 import json
 import math
 from dataclasses import dataclass, field
@@ -72,7 +70,6 @@ def run_vignettes(
 
 
 def wilson_ci95(hits: int, total: int) -> tuple[float, float]:
-    """Wilson 95% interval: stays sensible for a small sample like the vignette set."""
     z = 1.96
     p = hits / total
     d = 1 + z * z / total
@@ -110,7 +107,6 @@ def summarize(results: list[CaseResult]) -> dict:
             sum(x.result.priority_level == x.expected["priorityLevel"] for x in level_cases),
             len(level_cases)),
         "redFlagRecall": rate(sum(x.result.is_red_flag for x in red_cases), len(red_cases)),
-        # safety: cases that need an onsite visit but were offered online
         "onlineFalsePositives": [x.id for x in should_be_onsite if x.result.online_eligible],
         "onlineRate": rate(sum(x.result.online_eligible for x in results), len(results)),
     }

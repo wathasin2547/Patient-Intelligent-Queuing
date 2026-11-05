@@ -1,10 +1,3 @@
-"""Read-only data access. The algorithm service never writes: Next.js saves screenings and queues.
-
-MongoRepository reads the collections Prisma created (collection name = model name).
-CatalogRepository serves code/data/catalog.json for tests and offline evaluation,
-so vignette runs use the same catalog that `npm run db:seed` puts in the DB.
-"""
-
 import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -89,7 +82,6 @@ class MongoRepository:
                 doctor_id=str(q["doctorId"]) if q.get("doctorId") else None,
                 priority_level=q["priorityLevel"],
                 check_in_time=q["checkInTime"],
-                # queues saved before Queue.patientId existed have no patient: never treated as busy
                 patient_id=str(q.get("patientId", "")),
                 age_group=pt.get("ageGroup"),
                 is_chronic=bool(pt.get("isChronic", False)),
@@ -97,7 +89,6 @@ class MongoRepository:
         return out
 
     def risk_bonus(self) -> RiskBonus:
-        """D_j settings; defaults apply until the admin saves SystemSetting."""
         s = self.db["SystemSetting"].find_one() or {}
         return RiskBonus(
             age_minutes=float(s.get("ageBonusMinutes", DEFAULT_AGE_BONUS_MINUTES)),
@@ -106,17 +97,14 @@ class MongoRepository:
         )
 
     def busy_patient_ids(self) -> set[str]:
-        """Patients being called or examined right now, in any department."""
         busy = self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}, "patientId": {"$exists": True}})
         return {str(q["patientId"]) for q in busy}
 
     def busy_doctor_ids(self) -> set[str]:
-        """Doctors with a patient called or in the room right now."""
         busy = self.db["Queue"].find({"status": {"$in": ["CALLED", "IN_PROGRESS"]}, "doctorId": {"$ne": None}})
         return {str(q["doctorId"]) for q in busy}
 
     def upcoming_appointments(self, now: datetime, minutes: int) -> dict[str, int]:
-        """Booked appointments per doctor due within the next `minutes` (not checked in yet)."""
         due = self.db["Appointment"].find({
             "status": "SCHEDULED",
             "appointmentTime": {"$gte": now, "$lt": now + timedelta(minutes=minutes)},
@@ -124,7 +112,6 @@ class MongoRepository:
         return dict(Counter(str(a["doctorId"]) for a in due))
 
     def fallback_department(self) -> str | None:
-        """Department for cases no department scored on; None until the DB has been reseeded."""
         d = self.db["Department"].find_one({"code": FALLBACK_DEPARTMENT_CODE})
         return str(d["_id"]) if d else None
 
@@ -133,12 +120,6 @@ class MongoRepository:
 
 
 class CatalogRepository:
-    """In-memory repository built from catalog.json.
-
-    IDs are readable: departments use their key ("MED"), questions use "q<order>",
-    doctors use "<DEPT>-<n>". Shifts start on the day of `day` (Bangkok time), like the seed.
-    """
-
     SHIFT_DAYS = 7
 
     def __init__(

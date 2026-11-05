@@ -1,8 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { AppointmentStatus, Level, QueueStatus } from "@/lib/mock/types";
 
-// Triage colours follow the hospital scale in the report (แดง ส้ม เหลือง เขียว ขาว).
-// Colour only marks the dot; the level name is always written next to it.
 export const LEVEL: Record<Level, { name: string; dot: string }> = {
   1: { name: "แดง", dot: "bg-red-500" },
   2: { name: "ส้ม", dot: "bg-orange-500" },
@@ -97,7 +95,6 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
   );
 }
 
-/** Pill tabs: the active one is solid navy, the others turn light blue on hover. */
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5" role="tablist">
@@ -134,12 +131,9 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-// Hover darkens/fills, press nudges down 1px; disabled is visibly flat. Min height 40px for touch.
 const BTN = "inline-flex min-h-10 items-center justify-center gap-2 rounded-full text-sm font-medium transition active:translate-y-px disabled:pointer-events-none disabled:opacity-45";
 export const btn = {
-  // main action: yellow with dark text — stands out against the blue brand and the neutral page
   primary: `${BTN} bg-cta px-5 py-2.5 font-semibold text-ink ring-1 ring-cta-edge shadow-[0_6px_16px_-8px_rgba(217,154,0,0.9)] hover:bg-cta-strong hover:shadow-[0_8px_22px_-8px_rgba(217,154,0,1)]`,
-  // blue brand button (login)
   brand: `${BTN} bg-primary px-5 py-2.5 text-white shadow-[0_6px_16px_-8px_rgba(0,119,182,0.7)] hover:bg-primary-strong hover:shadow-[0_8px_20px_-8px_rgba(2,62,138,0.8)]`,
   accent: `${BTN} bg-accent px-5 py-2.5 text-accent-ink hover:bg-accent-strong`,
   secondary: `${BTN} bg-surface px-5 py-2.5 text-ink ring-1 ring-ink/25 hover:bg-subtle hover:ring-ink/60`,
@@ -169,7 +163,6 @@ export function Avatar({ text, dark }: { text: string; dark?: boolean }) {
   );
 }
 
-/** Short avatar text for a doctor: department code initial + trailing number ("M1"). */
 export function doctorInitials(name: string, deptCode?: string) {
   return `${(deptCode ?? "D").charAt(0)}${name.match(/\d+$/)?.[0] ?? ""}`;
 }

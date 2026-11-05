@@ -1,8 +1,5 @@
 "use client";
 
-// Doctor's own screen: the patient in front of them, who comes next, and UC09.
-// Calling the next patient stays automatic (UC13): the doctor never picks from the line.
-
 import { CalendarCheck, CheckCheck, ClipboardList, Stethoscope, Users, Video } from "lucide-react";
 import Link from "next/link";
 import { APPOINTMENT_STATUS, btn, Card, Empty, LevelChip, PageHeader, StatusChip, Tag } from "@/components/ui";

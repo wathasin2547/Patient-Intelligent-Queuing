@@ -1,10 +1,3 @@
-"""Score the case vignettes. Rule-only mode for now (closed answers only, LLM skipped).
-
-Usage (from apps/algorithm):
-    python -m scripts.evaluate_vignettes            # table + summary
-    python -m scripts.evaluate_vignettes --json     # machine-readable, for chapter 4
-"""
-
 import argparse
 import json
 import sys
@@ -12,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 
 from triage.evaluation import run_vignettes, summarize
 
-# Fixed clock (10:00 Bangkok) so every run gives the same result
 NOW = datetime(2026, 10, 1, 10, 0, tzinfo=timezone(timedelta(hours=7))).astimezone(timezone.utc)
 
 

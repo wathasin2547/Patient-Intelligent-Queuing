@@ -1,6 +1,3 @@
-// Seeds the development database with MOCK data. Wipes every PIQ collection first.
-// Run: npx prisma db seed
-
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { departments, doctors, questions, symptomCodes, type DeptKey } from "./seed-data";
@@ -10,7 +7,6 @@ const prisma = new PrismaClient();
 const BANGKOK_OFFSET_HOURS = 7;
 const SHIFT_DAYS = 7;
 
-// Bangkok local time -> UTC Date (Asia/Bangkok has no DST)
 function bangkokToUtc(y: number, m: number, d: number, hour: number): Date {
   return new Date(Date.UTC(y, m, d, hour - BANGKOK_OFFSET_HOURS));
 }
@@ -24,7 +20,6 @@ function requireEnv(name: string): string {
 }
 
 async function clearAll() {
-  // children before parents
   await prisma.delivery.deleteMany();
   await prisma.refillSchedule.deleteMany();
   await prisma.prescription.deleteMany();
@@ -53,7 +48,6 @@ async function main() {
   const deptId = {} as Record<DeptKey, string>;
   for (const d of departments) {
     const created = await prisma.department.create({
-      // code is the queue-number prefix ("MED-001") used by lib/triage/save.ts
       data: { name: d.name, code: d.key, scopeOfCare: d.scopeOfCare },
     });
     deptId[d.key] = created.id;
@@ -64,7 +58,6 @@ async function main() {
       code: s.code,
       label: s.label,
       synonyms: s.synonyms,
-      // stored keyed by departmentId, as in SPEC §2
       departmentWeights: Object.fromEntries(
         Object.entries(s.weights).map(([key, w]) => [deptId[key as DeptKey], w]),
       ),
@@ -93,9 +86,8 @@ async function main() {
   });
 
   const now = new Date();
-  // "today" in Bangkok
   const todayBkk = new Date(now.getTime() + BANGKOK_OFFSET_HOURS * 3600_000);
-  let firstMedDoctorId: string | null = null; // gets the doc.med1 login (UC09)
+  let firstMedDoctorId: string | null = null;
   for (const doc of doctors) {
     const created = await prisma.doctor.create({
       data: { name: doc.name, departmentId: deptId[doc.dept] },
@@ -137,7 +129,6 @@ async function main() {
         doctorId: firstMedDoctorId,
       },
       {
-        // suspended by the admin: the login page must say so (UC02 alternative flow)
         username: "staff.old",
         passwordHash: await bcrypt.hash(staffPassword, 10),
         role: "STAFF",

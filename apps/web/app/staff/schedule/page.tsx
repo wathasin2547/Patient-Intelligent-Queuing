@@ -1,8 +1,5 @@
 "use client";
 
-// UC11 Schedule Management — doctors' shifts + appointments for patients who already have one.
-// Patients never book by themselves; staff record the appointment here.
-
 import { CalendarPlus, Clock3, X } from "lucide-react";
 import { useState } from "react";
 import { APPOINTMENT_STATUS, Avatar, btn, Card, doctorInitials, Empty, Field, Notice, PageHeader, PillSelect, Segmented } from "@/components/ui";

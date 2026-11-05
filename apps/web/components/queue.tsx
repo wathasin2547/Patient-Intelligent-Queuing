@@ -27,7 +27,6 @@ function QueueTags({ q }: { q: Queue }) {
   );
 }
 
-/** One patient in a doctor's waiting line, ranked by P. */
 export function QueueRow({ q, rank }: { q: Queue; rank: number }) {
   const { state, now } = useMock();
   return (
@@ -51,7 +50,6 @@ export function QueueRow({ q, rank }: { q: Queue; rank: number }) {
   );
 }
 
-/** The patient with the doctor now (called or in the exam room). */
 export function CurrentPatient({ q }: { q: Queue }) {
   return (
     <Link href={`/staff/queues/${q.id}`} className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition ${q.status === "CALLED" ? "bg-accent/70 hover:bg-accent" : "bg-subtle hover:bg-subtle-2"}`}>
@@ -68,10 +66,6 @@ export function CurrentPatient({ q }: { q: Queue }) {
   );
 }
 
-/**
- * Actions once UC13 has called a patient. Onsite: the patient walks into the room.
- * Online: the patient already got the doctor's video link on LINE; the doctor opens the same room.
- */
 export function CalledActions({ q, small }: { q: Queue; small?: boolean }) {
   const { state, now, update } = useMock();
   const doctor = state.doctors.find((d) => d.id === q.doctorId);
@@ -81,7 +75,6 @@ export function CalledActions({ q, small }: { q: Queue; small?: boolean }) {
   const size = small ? btn.small : "";
 
   function start() {
-    // only the doctor's own click opens the room; staff just mark the visit as started
     if (online && isDoctor && doctor?.meetingUrl) window.open(doctor.meetingUrl, "_blank", "noopener");
     update((s) => startExam(s, q.id));
   }

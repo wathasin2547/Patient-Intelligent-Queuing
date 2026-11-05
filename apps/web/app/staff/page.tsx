@@ -1,7 +1,5 @@
 "use client";
 
-// UC07 Dashboard — extends UC10: the same queue data, shown as graphs + per-doctor lines.
-
 import { ArrowRight, BarChart3, CalendarCheck, Megaphone, Siren, Stethoscope, Timer, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -13,7 +11,7 @@ import { useLookups, useMock } from "@/lib/mock/store";
 import { bkkDate, bkkHour, fmtTime } from "@/lib/mock/time";
 import type { Level } from "@/lib/mock/types";
 
-const DENSE_PER_DOCTOR = 4; // waiting patients per on-shift doctor that counts as "crowded"
+const DENSE_PER_DOCTOR = 4;
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15];
 
 export default function Dashboard() {
@@ -83,7 +81,6 @@ export default function Dashboard() {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-5">
-          {/* overview */}
           <Card title="วันนี้" note={dept === "ALL" ? "ทุกแผนก" : deptMap.get(dept)?.name}>
             <div className="grid gap-2 rounded-[22px] bg-subtle p-2 sm:grid-cols-2">
               <div className="rounded-[18px] bg-surface p-5 shadow-[0_1px_2px_rgba(3,4,94,0.05),0_10px_24px_-16px_rgba(3,4,94,0.2)]">
@@ -130,7 +127,6 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* arrivals per hour */}
           <Card title="ผู้ป่วยรับคิวรายชั่วโมง" icon={BarChart3} note="วันนี้ · แท่งสีน้ำเงินเข้มคือชั่วโมงปัจจุบัน กรอบเส้นประคือชั่วโมงที่ยังมาไม่ถึง">
             <div className="grid items-end gap-6 sm:grid-cols-[150px_minmax(0,1fr)]">
               <div>

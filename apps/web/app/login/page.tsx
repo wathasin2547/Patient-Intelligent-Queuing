@@ -1,5 +1,3 @@
-// UC02 — staff and doctors sign in with username + password (NextAuth Credentials, see auth.ts).
-
 import { Activity, ListOrdered, Stethoscope } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -14,11 +12,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--color-ocean-100),transparent_55%),radial-gradient(ellipse_at_bottom_right,#e0f6fb,transparent_50%)] p-4 sm:p-6">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-line/70 bg-surface shadow-raised lg:grid-cols-[1.1fr_1fr]">
-        {/* Brand panel: navy with the palette colours as stacked "queue" bars. */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-brand p-10 text-white lg:flex">
           <Logo />
           <div>
-            {/* two lines, each with an icon pill like the old "จัดคิว [ ] ผู้ป่วย" headline */}
             <h2 className="text-[40px] font-semibold leading-[1.3] tracking-tight">
               <span className="whitespace-nowrap">
                 Patient

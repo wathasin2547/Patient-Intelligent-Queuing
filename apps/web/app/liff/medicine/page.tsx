@@ -1,7 +1,5 @@
 "use client";
 
-// UC06 choose how to receive medicine, then follow the delivery status.
-
 import { Check, Hospital, Pill, Truck } from "lucide-react";
 import { useState } from "react";
 import { Notice } from "@/components/ui";
@@ -46,7 +44,6 @@ function RxCard({ rx }: { rx: Prescription }) {
 
   function confirm() {
     if (!method) return;
-    // UC06 exception: shipping needs a complete address
     if (method === "SHIP" && address.trim().length < 15) return setError("กรุณากรอกที่อยู่ให้ครบ (บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์)");
     update((s, now) => chooseDelivery(s, now, { prescriptionId: rx.id, method, address: method === "SHIP" ? address.trim() : null }));
   }

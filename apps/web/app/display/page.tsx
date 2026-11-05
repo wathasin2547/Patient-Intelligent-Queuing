@@ -1,10 +1,5 @@
 "use client";
 
-// UC13 step 3 — the department screen in front of the exam rooms.
-// Shows queue numbers only (no names or symptoms) for privacy.
-// Online visits are left out: those patients are at home and get their link on LINE.
-// Read from across the room: near-black board, white numbers, yellow = called now; labels >= 16px.
-
 import { Activity, ArrowRight, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { doctorsOnShift, rankedWaiting } from "@/lib/mock/logic";
@@ -53,7 +48,6 @@ export default function DisplayPage() {
       </header>
 
       {latest && (
-        // aria-live so a screen reader at the counter announces each new call
         <div aria-live="polite" className="mt-6 flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-call px-8 py-7 text-ink shadow-[0_0_0_6px_rgba(255,214,10,0.18)]">
           <div className="flex items-center gap-5">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-ink text-call motion-safe:animate-pulse"><Megaphone size={28} strokeWidth={2} /></span>

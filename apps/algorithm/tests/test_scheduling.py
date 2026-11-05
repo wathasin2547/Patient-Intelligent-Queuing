@@ -15,7 +15,6 @@ def test_fewest_waiting_wins():
 
 
 def test_idle_doctor_beats_busy_one_when_queues_are_empty():
-    # before the fix both had load 0 and A won the tie while B sat idle
     assert pick_doctor(["A", "B"], [], busy={"A"}) == "B"
 
 

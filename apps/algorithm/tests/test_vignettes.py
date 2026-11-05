@@ -1,10 +1,3 @@
-"""Safety checks over the vignette set.
-
-Accuracy is NOT asserted here on purpose: the expected answers are written independently
-of the weights, and the accuracy figure is a result for chapter 4, not a test target.
-Run `python -m scripts.evaluate_vignettes` to see it.
-"""
-
 from tests.helpers import MORNING
 from triage.evaluation import load_vignettes, run_vignettes, summarize
 

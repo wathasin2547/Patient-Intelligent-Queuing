@@ -1,16 +1,3 @@
-"""Experiment 4 (thesis sec:evaluation-design): rule-only vs LLM-only vs hybrid on the mock vignettes.
-
-    python -m scripts.compare_methods                  # 5 runs of each method
-    python -m scripts.compare_methods --delay 5        # seconds between LLM calls (free tier limits)
-
-Accuracy and speed are measured apart. Calls get a long timeout and retries so a busy free tier is
-not scored as a wrong answer; the real latency, and how many calls would miss the service's own
-5 second timeout, are reported next to the accuracy.
-
-LLM-only exists only to be compared here. It breaks CLAUDE.md rule 1 by design, so nothing in the
-service may import it. Vignettes only: KTAS records are real patient data (see evaluate_ktas.py).
-"""
-
 import argparse
 import json
 import os
@@ -27,11 +14,9 @@ from triage.llm import TIMEOUT_SECONDS, LLMExtractor, NoLLM, gemini_call
 from triage.models import TriageResult
 from triage.repository import CatalogRepository
 
-# Same fixed clock as evaluate_vignettes
 NOW = datetime(2026, 10, 1, 10, 0, tzinfo=timezone(timedelta(hours=7))).astimezone(timezone.utc)
 EXPERIMENT_TIMEOUT_SECONDS = 60.0
 ATTEMPTS = 4
-# More failures than this in one run means quota or an outage: stop and score the finished runs
 MAX_FAILED_PER_RUN = 3
 
 LLM_ONLY_PROMPT = """คุณคือระบบคัดกรองผู้ป่วยนอก อ่านข้อมูลผู้ป่วยแล้วตัดสินแผนกและระดับความเร่งด่วน
@@ -45,8 +30,6 @@ LLM_ONLY_PROMPT = """คุณคือระบบคัดกรองผู�
 
 
 class TimedCall:
-    """Retries a busy provider and records how long each successful call really took."""
-
     def __init__(self, call: Callable[[str, str], str], delay: float, backoff: float):
         self.call, self.delay, self.backoff = call, delay, backoff
         self.seconds: list[float] = []
@@ -78,7 +61,6 @@ class CountingExtractor:
 
 
 def llm_only_result(call: Callable[[str, str], str], system: str, case: dict) -> TriageResult | None:
-    """One LLM-only decision. None when the call or its reply is unusable (counted as failed)."""
     text = "\n".join([f"{order}. {label}" for order, label in case["answers"]] + [case.get("freeText", "")])
     try:
         d = json.loads(call(system, text))
@@ -107,7 +89,6 @@ def run_llm_only(call: Callable[[str, str], str]) -> tuple[list[CaseResult], int
 
 
 def score(runs: list[list[CaseResult]], seconds: list[float], failed: int) -> dict:
-    """First run for accuracy (same as evaluate_vignettes), all runs for consistency."""
     answers: dict[str, set] = {}
     for run in runs:
         for x in run:

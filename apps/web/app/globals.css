@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/* Design tokens — "Ocean Breeze" palette (#03045E #0077B6 #00B4D8 #90E0EF #CAF0F8).
-   Minimal / Swiss style from the ui-ux-pro-max skill: white cards on a pale-blue canvas,
-   navy text, one blue for primary actions, light cyan as the highlight.
-   Every text pair below is WCAG AA (>= 4.5:1); light cyan is never used for text on white. */
 @theme {
   --color-ocean-950: #03045e;
   --color-ocean-800: #023e8a;
@@ -12,35 +8,30 @@
   --color-ocean-300: #90e0ef;
   --color-ocean-100: #caf0f8;
 
-  /* Neutrals are plain slate (not blue-tinted) so blue stays a brand colour, not the whole page. */
   --color-canvas: #f4f6f9;
   --color-surface: #ffffff;
   --color-subtle: #eef1f5;
-  --color-subtle-2: #e2e7ee; /* hover of subtle */
+  --color-subtle-2: #e2e7ee;
   --color-line: #d3dae3;
-  --color-ink: #0f172a; /* text + dark chips — 16.5:1 on canvas */
-  --color-ink-2: #334155; /* body text — 9:1 on subtle */
-  --color-ink-3: #4b5a70; /* meta text — >= 5.6:1 on every light surface */
+  --color-ink: #0f172a;
+  --color-ink-2: #334155;
+  --color-ink-3: #4b5a70;
 
-  --color-brand: #03045e; /* sidebar, logo, login panel, patient hero cards */
-  /* Main action = warm yellow, the complement of the blue brand (same "go" colour as the call board).
-     Dark text on it 11.4:1; the darker edge keeps the button outlined on white. */
+  --color-brand: #03045e;
+
   --color-cta: #ffc72c;
   --color-cta-strong: #f2b300;
   --color-cta-edge: #d99a00;
-  /* Decorative pills on the navy login panel — each a different hue from the yellow logo.
-     Navy icon on coral 7.7:1, on mint 12:1. */
+
   --color-coral: #ff8a65;
   --color-mint: #5eead4;
 
-  --color-primary: #0077b6; /* links, focus ring, info — 4.9:1 on white */
-  --color-primary-strong: #023e8a; /* hover / links on tinted backgrounds */
-  --color-accent: #90e0ef; /* highlight chips; navy text 11.9:1 */
+  --color-primary: #0077b6;
+  --color-primary-strong: #023e8a;
+  --color-accent: #90e0ef;
   --color-accent-strong: #00b4d8;
   --color-accent-ink: #03045e;
 
-  /* Call board (/display) — read from across the waiting room. Yellow means "your turn":
-     14:1 on the board, navy text on yellow 12.6:1. */
   --color-board: #01022e;
   --color-board-card: #0b1552;
   --color-call: #ffd60a;
@@ -60,7 +51,7 @@ body {
 }
 
 @layer base {
-  /* Tailwind v4 resets the pointer on buttons; every clickable thing should show it. */
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   select:not(:disabled),
@@ -81,7 +72,6 @@ body {
     transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
 
-  /* Keyboard focus: always visible, 4.9:1 against white. */
   :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -111,7 +101,7 @@ body {
   .card {
     @apply rounded-card border border-line/70 bg-surface p-5 shadow-card sm:p-6;
   }
-  /* For cards that are links or buttons: lift + blue edge on hover. */
+
   .card-hover {
     @apply transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-raised;
   }
@@ -127,7 +117,7 @@ body {
   .pill {
     @apply rounded-full bg-surface px-4 py-2 text-sm text-ink outline-none ring-1 ring-line transition hover:ring-primary/50 focus:ring-2 focus:ring-primary;
   }
-  /* The five palette colours as a thin band — brand mark on login / landing. */
+
   .ocean-band {
     background: linear-gradient(
       90deg,

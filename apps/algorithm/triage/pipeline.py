@@ -1,15 +1,3 @@
-"""The full screening flow, in the exact order of thesis §3.4.10 / SPEC.md §3.2. Do not reorder.
-
-1-2  closed answers -> codes
-3    red flag (rules only, before the LLM)      -> stop
-4    free text -> LLM -> validate -> merge      (falls back to closed answers on failure)
-5-6  department scores, pick the highest
-7    priority level
-8    online eligibility (a suggestion only)
-9-10 shift check, doctor with the fewest waiting patients, initial queue score
-Step 11 (saving and notifying the patient) belongs to Next.js.
-"""
-
 from datetime import datetime
 
 from . import config, rules, scheduling
@@ -30,30 +18,26 @@ def triage(
     catalog = repo.symptom_codes()
     questions = repo.questions()
 
-    # ── steps 1-2 ──
     codes, warnings = rules.map_closed_answers(questions, inp.closed_answers)
     unknown = [c for c in codes if c not in catalog]
     if unknown:
         warnings.append(f"inactive or unknown codes ignored: {unknown}")
     codes = rules.known_codes(codes, catalog)
 
-    # ── step 3: red flag, rules only, LLM never called ──
     red = rules.find_red_flags(codes, catalog)
     if red:
         return _emergency(codes, [], "skipped", red, warnings)
 
-    # ── step 4: LLM, optional ──
     llm_codes: list[str] = []
     llm_status = "skipped"
     if inp.free_text and inp.free_text.strip():
         raw, llm_status = extractor.extract(inp.free_text, list(catalog.values()))
-        llm_codes = rules.dedupe(rules.known_codes(raw, catalog))  # never trust raw LLM output
+        llm_codes = rules.dedupe(rules.known_codes(raw, catalog))
         codes = rules.dedupe(codes + llm_codes)
         red = rules.find_red_flags(llm_codes, catalog)
         if red:
             return _emergency(codes, llm_codes, llm_status, red, warnings)
 
-    # ── steps 5-6 ──
     scores, contributions = rules.compute_department_scores(codes, catalog)
     waiting = repo.waiting_queues()
     department = rules.pick_department(
@@ -67,10 +51,8 @@ def triage(
     if nothing_scored:
         department = repo.fallback_department()
 
-    # ── steps 7-8 ──
     level = rules.compute_priority_level(codes, catalog, inp)
     online = rules.check_online_eligible(codes, catalog, level, inp)
-    # Text nobody read may hold a reason to come in, so the closed answers alone can't clear online
     if inp.free_text and inp.free_text.strip() and llm_status != "ok":
         online = False
         warnings.append("free text was not read; online not offered")
@@ -89,15 +71,12 @@ def triage(
         warnings=warnings,
     )
     if nothing_scored:
-        # nothing to go on: never suggest online
         result.online_eligible = False
         result.warnings.append("no department scored above zero; sent to the fallback department")
     if department is None:
-        # a DB seeded before the fallback department existed: staff must assign one
         result.warnings.append("no fallback department configured; staff must assign one")
         return result
 
-    # ── steps 9-10 ──
     shifts = repo.shifts()
     on_shift = scheduling.doctors_on_shift(shifts, department, now)
     if not on_shift:
@@ -122,7 +101,6 @@ def _emergency(codes, llm_codes, llm_status, red, warnings) -> TriageResult:
         assigned_department=None,
         priority_level=rules.LEVEL_RED,
         online_eligible=False,
-        # the red flag codes are the explanation for an emergency result
         reason=[ReasonItem(code=c, weight=0, department="EMERGENCY") for c in red],
         warnings=warnings,
     )

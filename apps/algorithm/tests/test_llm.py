@@ -15,7 +15,7 @@ CATALOG = [SymptomCode(code="fever", label="มีไข้", synonyms=["ตั�
 def test_prompt_lists_every_code_and_forbids_medical_decisions():
     prompt = system_prompt(CATALOG)
     assert "fever" in prompt and "ตัวร้อน" in prompt
-    assert "ห้ามระบุชื่อโรค การวินิจฉัย แผนก หรือระดับความเร่งด่วน" in prompt  # CLAUDE.md rule 1
+    assert "ห้ามระบุชื่อโรค การวินิจฉัย แผนก หรือระดับความเร่งด่วน" in prompt
 
 
 def test_reply_must_be_a_codes_object():
@@ -96,9 +96,9 @@ def test_no_key_means_rule_only(monkeypatch):
 
 def test_compare_methods_scores_all_three_and_counts_failures():
     def fake(system, text):
-        if "ตัวแปลงข้อความอาการ" in system:  # hybrid: this provider never finds a code
+        if "ตัวแปลงข้อความอาการ" in system:
             return '{"codes": []}'
-        if "หายใจไม่ทัน" in text:  # LLM-only: one case always fails
+        if "หายใจไม่ทัน" in text:
             raise TimeoutError
         return json.dumps({"department": "MED", "priorityLevel": 4, "isRedFlag": False})
 

@@ -1,8 +1,3 @@
-"""PIQ algorithm service. Called only by the Next.js backend, never by LIFF directly.
-
-Reads from MongoDB, never writes: Next.js saves the screening/queue and notifies the patient.
-"""
-
 import os
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -40,8 +35,6 @@ def get_extractor() -> SymptomExtractor:
 def get_now() -> datetime:
     return datetime.now(timezone.utc)
 
-
-# ── request / response bodies (camelCase to match SPEC.md §3.1) ──
 
 class ClosedAnswerIn(BaseModel):
     questionId: str
@@ -88,9 +81,9 @@ class RankedOut(BaseModel):
     queueId: str
     priorityLevel: int
     waitingMinutes: float
-    riskMinutes: float = 0.0  # D_j: head start for older age / chronic disease
+    riskMinutes: float = 0.0
     score: float
-    heldElsewhere: bool = False  # patient is busy in another queue: skipped now, keeps the place
+    heldElsewhere: bool = False
 
 
 class NextQueueResponse(BaseModel):
@@ -151,8 +144,6 @@ def next_queue(
     repo: Repository = Depends(get_repo),
     now: datetime = Depends(get_now),
 ) -> NextQueueResponse:
-    """UC10 auto-call: Next.js calls this after a doctor marks DONE / NO_SHOW,
-    then sets the returned queue to CALLED and pushes the LINE message."""
     mine = [q for q in repo.waiting_queues() if q.doctor_id == body.doctorId]
     busy = repo.busy_patient_ids()
     ranked = [

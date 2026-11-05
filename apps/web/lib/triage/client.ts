@@ -8,7 +8,6 @@ export type TriageRequest = {
   symptomChanged?: boolean;
 };
 
-// Same fields as TriageResponse in apps/algorithm/main.py — reason and scores must reach the database (rule 3)
 export type TriageResult = {
   symptomCodes: string[];
   llmCodes: string[];
@@ -35,7 +34,7 @@ export async function callTriage(body: TriageRequest): Promise<TriageResult> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(12000), // LLM 5 วินาที + ลองซ้ำ 1 ครั้ง ต้องจบก่อนหมดเวลานี้
+    signal: AbortSignal.timeout(12000),
   });
 
   if (!res.ok) {

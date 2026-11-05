@@ -1,6 +1,3 @@
-// State transitions for the mock store. Each function is pure: (state, now, payload) -> state.
-// They mirror what the Next.js API routes will do once the database is wired up.
-
 import { APPOINTMENT_LEVEL, isDoctorBusy, isPatientBusy, newId, nextQueueNumber, nextShiftStart, pickDoctor, queueLimitError, rankedWaiting, shiftNow } from "./logic";
 import { addDays, bkkDate } from "./time";
 import type {
@@ -17,11 +14,8 @@ function notify(s: MockState, patientId: string, now: number, text: string): Moc
 
 const deptName = (s: MockState, id: string | null) => s.departments.find((d) => d.id === id)?.name ?? "-";
 
-// ── UC02 ──
-
 export const ROLE_LABEL: Record<Role, string> = { ADMIN: "ผู้ดูแลระบบ", STAFF: "เจ้าหน้าที่", DOCTOR: "แพทย์" };
 
-/** Where each role lands after login: a doctor only works their own queue. */
 export const homeOf = (role: Role) => (role === "DOCTOR" ? "/staff/doctor" : "/staff");
 
 export function login(s: MockState, username: string): { state: MockState; error?: string } {
@@ -30,8 +24,6 @@ export function login(s: MockState, username: string): { state: MockState; error
   if (!u.isActive) return { state: s, error: "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ" };
   return { state: { ...s, sessionUserId: u.id } };
 }
-
-// ── UC08 ──
 
 export function editScreening(s: MockState, now: number, p: { queueId: string; departmentId: string; priorityLevel: Level; userId: string }): MockState {
   const q = s.queues.find((x) => x.id === p.queueId);
@@ -45,8 +37,6 @@ export function editScreening(s: MockState, now: number, p: { queueId: string; d
     ? notify(next, q.patientId, now, `เจ้าหน้าที่ปรับแผนกของคุณเป็น ${deptName(s, p.departmentId)} หมายเลขคิวใหม่ ${queueNumber}`)
     : next;
 }
-
-// ── queue status changes made by staff at the exam room ──
 
 export function startExam(s: MockState, queueId: string): MockState {
   return { ...s, queues: s.queues.map((q) => (q.id === queueId && q.status === "CALLED" ? { ...q, status: "IN_PROGRESS" } : q)) };
@@ -62,8 +52,6 @@ export function markNoShow(s: MockState, now: number, queueId: string): MockStat
   };
 }
 
-// ── เจ้าหน้าที่หรือแพทย์กดเรียกคิวถัดไปเอง (ระหว่างที่ยังไม่เปิดระบบเรียกอัตโนมัติ UC13) ──
-// เลือกคนที่คะแนน P สูงสุดในบรรดาคนที่เรียกได้ (ข้ามคนที่ติดตรวจอยู่อีกแผนก แต่ยังเก็บลำดับไว้)
 export function callNext(s: MockState, now: number, doctorId: string): { state: MockState; error?: string } {
   if (isDoctorBusy(s, doctorId)) return { state: s, error: "แพทย์กำลังตรวจหรือเรียกผู้ป่วยอยู่" };
   const pick = rankedWaiting(s, doctorId, now).find((q) => !isPatientBusy(s, q.patientId));
@@ -72,10 +60,6 @@ export function callNext(s: MockState, now: number, doctorId: string): { state: 
     state: { ...s, queues: s.queues.map((q) => (q.id === pick.id ? { ...q, status: "CALLED", calledTime: iso(now) } : q)) },
   };
 }
-
-// ── UC09 alternate flow: refer to another department on the same day ──
-// The new queue waits from the referral time like any other queue (no head start over people
-// already waiting there), so the patient saves a second hospital day without cutting in.
 
 export function referQueue(s: MockState, now: number, p: { fromQueueId: string; departmentId: string; priorityLevel: Level }): { state: MockState; error?: string; queueNumber?: string } {
   const from = s.queues.find((x) => x.id === p.fromQueueId);
@@ -96,14 +80,12 @@ export function referQueue(s: MockState, now: number, p: { fromQueueId: string; 
   return { state: next, queueNumber: q.queueNumber };
 }
 
-// ── UC09 ── (does not call anyone: the freed doctor triggers UC13 on its own)
-
 export function recordResult(s: MockState, now: number, p: { queueId: string; items: PrescriptionItem[]; daysSupply: number }): MockState {
   const q = s.queues.find((x) => x.id === p.queueId);
   if (!q) return s;
   let next: MockState = { ...s, queues: s.queues.map((x) => (x.id === q.id ? { ...x, status: "DONE", finishedTime: iso(now) } : x)) };
   const items = p.items.filter((i) => i.name.trim());
-  if (items.length === 0) return next; // UC09 exception: no medicine -> no prescription, no UC06 message
+  if (items.length === 0) return next;
 
   const rxId = newId("rx");
   next = { ...next, prescriptions: [...next.prescriptions, { id: rxId, queueId: q.id, items, daysSupply: p.daysSupply, issuedAt: iso(now) }] };
@@ -133,8 +115,6 @@ export const DELIVERY_LABEL: Record<DeliveryStatus, string> = {
   SHIPPED: "จัดส่งแล้ว",
   COMPLETED: "ได้รับยาเรียบร้อย",
 };
-
-// ── UC10 (walk-in path, used by the "simulate a LINE patient" button) ──
 
 export type WalkInResult = { state: MockState; message: string; queueId?: string };
 
@@ -169,8 +149,6 @@ export function issueWalkIn(s: MockState, now: number, screening: Omit<Screening
   return { state: next, message: `ออกคิว ${q.queueNumber} ให้ ${doctor} (ภาระงานน้อยที่สุดในแผนก)`, queueId: q.id };
 }
 
-// ── UC05 (patient side) ──
-
 export function cancelQueue(s: MockState, now: number, queueId: string): { state: MockState; error?: string } {
   const q = s.queues.find((x) => x.id === queueId);
   if (!q) return { state: s };
@@ -179,9 +157,6 @@ export function cancelQueue(s: MockState, now: number, queueId: string): { state
   return { state: notify(next, q.patientId, now, `ยกเลิกคิว ${q.queueNumber} เรียบร้อยแล้ว`) };
 }
 
-// ── UC01 ──
-
-/** Stand-in for the LINE userId that LIFF would provide for a first-time user. */
 export const LIFF_USER_PREFIX = "U-liff-";
 
 export function registerPatient(s: MockState, now: number, p: Omit<Patient, "id" | "createdAt" | "lineUserId">): MockState {
@@ -194,8 +169,6 @@ export function updatePatient(s: MockState, id: string, p: Partial<Omit<Patient,
   return { ...s, patients: s.patients.map((x) => (x.id === id ? { ...x, ...p } : x)) };
 }
 
-// ── UC06 ──
-
 export function chooseDelivery(s: MockState, now: number, p: { prescriptionId: string; method: DeliveryMethod; address: string | null }): MockState {
   const delivery: Delivery = { id: newId("dl"), prescriptionId: p.prescriptionId, method: p.method, address: p.address, status: "PENDING", updatedAt: iso(now) };
   let next: MockState = { ...s, deliveries: [...s.deliveries.filter((d) => d.prescriptionId !== p.prescriptionId), delivery] };
@@ -207,8 +180,6 @@ export function chooseDelivery(s: MockState, now: number, p: { prescriptionId: s
   return pid ? notify(next, pid, now, p.method === "SHIP" ? "บันทึกการจัดส่งยาถึงบ้านแล้ว ระบบจะแจ้งเมื่อจัดส่ง" : "บันทึกการรับยาที่โรงพยาบาลแล้ว ระบบจะแจ้งเมื่อยาพร้อม") : next;
 }
 
-// ── UC11 ──
-
 export function shiftOverlaps(s: MockState, doctorId: string, startTime: string, endTime: string, ignoreId?: string): boolean {
   return s.shifts.some((sh) => sh.id !== ignoreId && sh.doctorId === doctorId && sh.status === "ACTIVE" && sh.startTime < endTime && startTime < sh.endTime);
 }
@@ -217,7 +188,6 @@ export function addShift(s: MockState, p: Omit<Shift, "id" | "status">): MockSta
   return { ...s, shifts: [...s.shifts, { ...p, id: newId("sh"), status: "ACTIVE" }] };
 }
 
-/** Patients affected by cancelling a shift: appointments inside it + people waiting for that doctor if it is running now. */
 export function shiftImpact(s: MockState, shift: Shift, now: number) {
   const appts = s.appointments.filter((a) => a.doctorId === shift.doctorId && a.status === "SCHEDULED" && a.appointmentTime >= shift.startTime && a.appointmentTime < shift.endTime);
   const running = new Date(shift.startTime).getTime() <= now && now < new Date(shift.endTime).getTime();
@@ -225,7 +195,6 @@ export function shiftImpact(s: MockState, shift: Shift, now: number) {
   return { appts, waiting };
 }
 
-/** Cancel a shift; waiting patients move to the least-loaded colleague in the same department. */
 export function cancelShift(s: MockState, now: number, shiftId: string): MockState {
   const shift = s.shifts.find((x) => x.id === shiftId);
   if (!shift) return s;
@@ -249,7 +218,6 @@ export function setAppointmentStatus(s: MockState, id: string, status: Appointme
   return { ...s, appointments: s.appointments.map((a) => (a.id === id ? { ...a, status } : a)) };
 }
 
-/** UC10 appointment path: patient confirms arrival -> queue with the booked doctor. */
 export function checkInAppointment(s: MockState, now: number, appointmentId: string): { state: MockState; error?: string } {
   const a = s.appointments.find((x) => x.id === appointmentId);
   if (!a || a.status !== "SCHEDULED") return { state: s };
@@ -266,8 +234,6 @@ export function checkInAppointment(s: MockState, now: number, appointmentId: str
   const next = { ...setAppointmentStatus(s, a.id, "ARRIVED"), queues: [...s.queues, q] };
   return { state: notify(next, a.patientId, now, `ยืนยันการมาถึงแล้ว หมายเลขคิว ${q.queueNumber}`) };
 }
-
-// ── UC12 ──
 
 export const upsert = <T extends { id: string }>(list: T[], item: T) =>
   list.some((x) => x.id === item.id) ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item];

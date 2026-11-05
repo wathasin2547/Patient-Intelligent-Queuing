@@ -15,7 +15,7 @@ def setup_module():
     ]
     app.dependency_overrides[get_repo] = lambda: repo(MORNING, waiting)
     app.dependency_overrides[get_now] = lambda: MORNING
-    app.dependency_overrides[get_extractor] = NoLLM  # a key in .env must not make tests call the LLM
+    app.dependency_overrides[get_extractor] = NoLLM
 
 
 def teardown_module():
@@ -30,9 +30,9 @@ def test_triage_matches_spec_shape():
     res = client.post("/triage", json={
         "patientId": "p1",
         "closedAnswers": [
-            {"questionId": "q1", "optionIndex": 2},   # 18-59
-            {"questionId": "q2", "optionIndex": 7},   # no red flag
-            {"questionId": "q3", "optionIndex": 1},   # cough
+            {"questionId": "q1", "optionIndex": 2},
+            {"questionId": "q2", "optionIndex": 7},
+            {"questionId": "q3", "optionIndex": 1},
         ],
         "freeText": "",
     })
@@ -42,11 +42,10 @@ def test_triage_matches_spec_shape():
     assert body["priorityLevel"] == 4
     assert body["llmStatus"] == "skipped"
     assert body["reason"][0]["code"] == "cough"
-    assert body["doctorId"] == "MED-2"  # MED-1 already has two waiting
+    assert body["doctorId"] == "MED-2"
 
 
 def test_queue_next_uses_aging():
     body = client.post("/queue/next", json={"doctorId": "MED-1"}).json()
-    # green waited 200 min: 300 + 400 = 700 > yellow 600 + 10
     assert body["next"]["queueId"] == "q-green-old"
     assert [r["queueId"] for r in body["ranking"]] == ["q-green-old", "q-yellow-new"]

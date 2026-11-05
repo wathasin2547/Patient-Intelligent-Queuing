@@ -19,7 +19,6 @@ export async function finishQueue(id: string) {
   revalidatePath("/staff");
 }
 
-// เรียกคิวถัดไป: เร่งด่วนสุดก่อน ถ้าเท่ากันเอาคนมาก่อน
 export async function callNext() {
   const next = await prisma.queue.findFirst({
     where: { status: "WAITING" },
