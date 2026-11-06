@@ -8,7 +8,7 @@ import { MockBadge, Notice } from "@/components/ui";
 import { canOpen, homeOf, type Role } from "@/lib/auth/schema";
 import { ROLE_LABEL } from "@/lib/mock/actions";
 import { NO_SHOW_MINUTES } from "@/lib/mock/logic";
-import { useMock } from "@/lib/mock/store";
+import { REAL_MODE, useMock } from "@/lib/mock/store";
 import { fmtDate, fmtTime } from "@/lib/mock/time";
 
 export type SessionUser = { username: string; role: Role };
@@ -110,16 +110,17 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
           </Link>
           <div className="hidden text-sm text-ink-3 lg:block">{fmtDate(now)}</div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="hidden sm:block"><MockBadge /></span>
+            {!REAL_MODE && <span className="hidden sm:block"><MockBadge /></span>}
             <div
               className="flex items-center gap-1 rounded-full bg-surface p-1 pl-3.5 ring-1 ring-line"
               title={`เวลาจำลองของระบบ — ผู้ป่วยที่ถูกเรียกแล้วไม่เข้าห้องตรวจภายใน ${NO_SHOW_MINUTES} นาทีจะถูกบันทึกว่าไม่มา`}
             >
               <Clock3 size={15} strokeWidth={1.8} className="text-ink-3" />
               <span className="mx-1.5 text-sm font-semibold tabular-nums">{fmtTime(now)} น.</span>
-              <button onClick={() => advance(5)} className="rounded-full px-2.5 py-1 text-xs text-ink-2 hover:bg-subtle hover:text-ink">+5 นาที</button>
-              <button onClick={() => advance(15)} className="rounded-full px-2.5 py-1 text-xs text-ink-2 hover:bg-subtle hover:text-ink">+15 นาที</button>
+              {!REAL_MODE && <button onClick={() => advance(5)} className="rounded-full px-2.5 py-1 text-xs text-ink-2 hover:bg-subtle hover:text-ink">+5 นาที</button>}
+              {!REAL_MODE && <button onClick={() => advance(15)} className="rounded-full px-2.5 py-1 text-xs text-ink-2 hover:bg-subtle hover:text-ink">+15 นาที</button>}
             </div>
+            {!REAL_MODE && (
             <button
               onClick={() => window.confirm("รีเซ็ตข้อมูลสมมติทั้งหมดกลับเป็นค่าเริ่มต้น?") && reset()}
               title="รีเซ็ตข้อมูลสมมติ"
@@ -127,6 +128,7 @@ export default function StaffShell({ user: sessionUser, logout, children }: { us
             >
               <RotateCcw size={16} strokeWidth={1.8} />
             </button>
+            )}
             <form action={logout} className="lg:hidden">
               <button type="submit" title="ออกจากระบบ" aria-label="ออกจากระบบ" className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-white hover:bg-primary-strong">
                 <LogOut size={16} strokeWidth={1.8} />

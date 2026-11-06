@@ -9,7 +9,7 @@ import { Avatar, btn, Card, doctorInitials, Empty, LevelChip, Notice, PageHeader
 import { callNext, issueWalkIn } from "@/lib/mock/actions";
 import { doctorLoad, doctorsOnShift, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
 import { PRESETS, simulateScreening } from "@/lib/mock/simulate";
-import { useLookups, useMock } from "@/lib/mock/store";
+import { useLookups, useMock, REAL_MODE } from "@/lib/mock/store";
 import { bkkDate, fmtTime } from "@/lib/mock/time";
 import type { CallEvent, QueueStatus } from "@/lib/mock/types";
 
@@ -74,6 +74,7 @@ function QueuesBoard() {
         <Segmented value={dept} onChange={setDept} options={[{ value: "ALL", label: "ทุกแผนก" }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
       </div>
 
+      {!REAL_MODE && (
       <section className="mb-5 rounded-card border-2 border-dashed border-line bg-surface p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -93,6 +94,7 @@ function QueuesBoard() {
         </div>
         {simMsg && <div className="mt-4"><Notice tone="sky">{simMsg}</Notice></div>}
       </section>
+      )}
 
       {unassigned.length > 0 && (
         <div className="mb-5">
@@ -238,6 +240,7 @@ function QueuesBoard() {
             </ul>
           </Card>
 
+          {!REAL_MODE && (
           <Card title="ข้อความ LINE ที่ระบบส่ง" icon={MessageCircle} note="แทนการ push จริง">
             <ul className="flex flex-col gap-3">
               {[...state.notifications].reverse().slice(0, 5).map((n) => (
@@ -249,6 +252,7 @@ function QueuesBoard() {
             </ul>
             <Link href="/liff/queue" target="_blank" className={`${btn.secondary} mt-4 w-full`}>เปิดหน้าผู้ป่วย (LIFF)</Link>
           </Card>
+          )}
         </div>
       </div>
     </div>

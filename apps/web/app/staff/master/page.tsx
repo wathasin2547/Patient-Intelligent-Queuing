@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
 import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
 import { maxSafeBonusMinutes, newId } from "@/lib/mock/logic";
-import { useLookups, useMock } from "@/lib/mock/store";
+import { useLookups, useMock, REAL_MODE } from "@/lib/mock/store";
 import type { Level, Question, Role, SymptomCode } from "@/lib/mock/types";
 
 type Tab = "departments" | "doctors" | "codes" | "questions" | "users";
@@ -457,7 +457,7 @@ function Users() {
     const isDoctor = form.role === "DOCTOR";
     if (isDoctor && !form.doctorId) return setErr("บัญชีแพทย์ต้องเลือกรายชื่อแพทย์ที่ใช้บัญชีนี้");
     const departmentId = isDoctor ? doctorMap.get(form.doctorId)!.departmentId : form.departmentId || null;
-    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId, doctorId: isDoctor ? form.doctorId : null, isActive: true }));
+    update((s) => saveUser(s, { id: newId("u"), username, role: form.role, departmentId, doctorId: isDoctor ? form.doctorId : null, isActive: true, ...(REAL_MODE ? { password: form.password } : {}) }));
     setForm(EMPTY_USER);
     setErr(null);
   }

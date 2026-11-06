@@ -102,6 +102,7 @@ export type User = {
   departmentId: string | null;
   doctorId: string | null;
   isActive: boolean;
+  password?: string;
 };
 
 export type QuestionOption = { label: string; symptomCode: string | null };
