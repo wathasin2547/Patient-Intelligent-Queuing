@@ -123,7 +123,7 @@ model Shift {
 model Queue {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId
   patientId           String    @db.ObjectId
-  screeningId         String    @db.ObjectId
+  screeningId         String?   @db.ObjectId
   appointmentId       String?   @db.ObjectId
   departmentId        String    @db.ObjectId
   doctorId            String?   @db.ObjectId
@@ -139,7 +139,7 @@ model Queue {
   referredFromQueueId String?   @db.ObjectId
 
   patient      Patient       @relation(fields: [patientId], references: [id])
-  screening    Screening     @relation(fields: [screeningId], references: [id])
+  screening    Screening?    @relation(fields: [screeningId], references: [id])
   appointment  Appointment?  @relation(fields: [appointmentId], references: [id])
   department   Department    @relation(fields: [departmentId], references: [id])
   doctor       Doctor?       @relation(fields: [doctorId], references: [id])

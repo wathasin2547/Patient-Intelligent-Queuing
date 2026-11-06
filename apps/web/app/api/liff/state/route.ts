@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadState } from "@/lib/db/state";
+import { loadState, stateForPatient } from "@/lib/db/state";
 import { getLineUserId } from "@/lib/line/profile";
 
 export const dynamic = "force-dynamic";
@@ -13,13 +13,5 @@ export async function GET(req: Request) {
 
   const state = await loadState();
   const me = state.patients.find((p) => p.lineUserId === lineUserId) ?? null;
-
-  return NextResponse.json({
-    ...state,
-    patients: me ? [me] : [],
-    users: [],
-    sessionUserId: null,
-    liffPatientId: me?.id ?? null,
-    registered: me !== null,
-  });
+  return NextResponse.json({ ...stateForPatient(state, me), registered: me !== null && me.ageGroup !== "" });
 }

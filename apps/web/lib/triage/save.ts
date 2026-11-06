@@ -33,12 +33,15 @@ export async function saveScreening(
   lineUserId: string,
   answers: ClosedAnswer[],
   r: TriageResult,
-): Promise<{ screeningId: string; queueNumber: string | null; blocked: QueueBlock | null }> {
+  visitType: "ONSITE" | "ONLINE" = "ONSITE",
+): Promise<{ screeningId: string; queueNumber: string | null; blocked: QueueBlock | null; registered: boolean }> {
   const patient = await prisma.patient.upsert({
     where: { lineUserId },
     update: {},
     create: { lineUserId },
   });
+
+  const registered = Boolean(patient.ageGroup);
 
   const screening = await prisma.screening.create({
     data: {
@@ -57,20 +60,20 @@ export async function saveScreening(
   });
 
   if (!r.assignedDepartment) {
-    return { screeningId: screening.id, queueNumber: null, blocked: null };
+    return { screeningId: screening.id, queueNumber: null, blocked: null, registered };
   }
 
   if (r.noDoctorOnShift || !r.doctorId) {
-    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "NO_DOCTOR", nextShiftStart: r.nextShiftStart } };
+    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "NO_DOCTOR", nextShiftStart: r.nextShiftStart }, registered };
   }
 
   const [active, max] = await Promise.all([activeQueues(patient.id), maxActiveQueues()]);
   const same = active.find((q) => q.departmentId === r.assignedDepartment);
   if (same) {
-    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "SAME_DEPARTMENT", queueNumber: same.queueNumber } };
+    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "SAME_DEPARTMENT", queueNumber: same.queueNumber }, registered };
   }
   if (active.length >= max) {
-    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "LIMIT", max } };
+    return { screeningId: screening.id, queueNumber: null, blocked: { kind: "LIMIT", max }, registered };
   }
 
   const queueNumber = await issueQueueNumber(r.assignedDepartment);
@@ -82,12 +85,12 @@ export async function saveScreening(
       departmentId: r.assignedDepartment,
       doctorId: r.doctorId,
       queueNumber,
-      visitType: "ONSITE",
+      visitType,
       priorityLevel: r.priorityLevel,
     },
   });
 
-  return { screeningId: screening.id, queueNumber, blocked: null };
+  return { screeningId: screening.id, queueNumber, blocked: null, registered };
 }
 
 export function blockMessage(b: QueueBlock): string {

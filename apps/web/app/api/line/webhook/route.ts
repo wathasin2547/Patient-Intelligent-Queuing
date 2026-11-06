@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { autoCallTick } from "@/lib/db/auto-call";
 import { replyMessage, type LineWebhookBody } from "@/lib/line/client";
 import { buildReply } from "@/lib/line/handler";
 import { verifyLineSignature } from "@/lib/line/signature";
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
     for (const r of results) {
       if (r.status === "rejected") console.error("LINE event failed:", r.reason);
     }
+    await autoCallTick(true).catch((err) => console.error("auto call failed", err));
   });
 
   return NextResponse.json({ ok: true });

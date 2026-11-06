@@ -10,10 +10,28 @@ const STORAGE_KEY = "piq-mock-state";
 const TICK_MS = 10_000;
 const POLL_MS = 5_000;
 
-const REAL_MODE = process.env.NEXT_PUBLIC_DATA_MODE === "real";
+export const REAL_MODE = process.env.NEXT_PUBLIC_DATA_MODE === "real";
 let useReal = false;
 let liffReal = false;
+let displayReal = false;
 let liffToken: string | null = null;
+
+const STAFF_COLLECTIONS = ["departments", "doctors", "shifts", "appointments", "queues", "prescriptions", "deliveries", "refills", "symptomCodes", "questions", "users"] as const;
+const PATIENT_COLLECTIONS = ["patients", "queues", "deliveries"] as const;
+type Collection = (typeof STAFF_COLLECTIONS)[number] | (typeof PATIENT_COLLECTIONS)[number];
+
+function collectChanges(before: MockState, after: MockState, keys: readonly Collection[]) {
+  const body: Record<string, unknown> = {};
+  for (const key of keys) {
+    const old = new Map((before[key] as { id: string }[]).map((x) => [x.id, JSON.stringify(x)]));
+    const changed = (after[key] as { id: string }[]).filter((x) => old.get(x.id) !== JSON.stringify(x));
+    if (changed.length) body[key] = changed;
+  }
+  const known = new Set(before.notifications.map((n) => n.id));
+  const fresh = after.notifications.filter((n) => !known.has(n.id));
+  if (fresh.length) body.notifications = fresh;
+  return body;
+}
 
 type Snapshot = { state: MockState; realNow: number };
 
@@ -48,12 +66,18 @@ function publish(s: MockState, persist = true) {
   listeners.forEach((l) => l());
 }
 
+const isReal = () => useReal || liffReal || displayReal;
+
 function commit(s: MockState) {
-  publish(useReal ? s : runAutoCall(s, simNow(s)));
+  if (isReal()) publish(s, false);
+  else publish(runAutoCall(s, simNow(s)));
 }
+
+const tick = () => fetch("/api/tick", { method: "POST" }).catch(() => undefined);
 
 async function pull() {
   try {
+    await tick();
     const res = await fetch("/api/state", { cache: "no-store" });
     if (!res.ok) return;
     const fresh = (await res.json()) as MockState;
@@ -63,30 +87,44 @@ async function pull() {
   }
 }
 
-async function sync(before: MockState, after: MockState) {
-  const old = new Map(before.queues.map((q) => [q.id, q]));
-  const changes = after.queues
-    .filter((q) => {
-      const o = old.get(q.id);
-      return o && (o.status !== q.status || o.calledTime !== q.calledTime || o.finishedTime !== q.finishedTime);
-    })
-    .map((q) => ({ id: q.id, status: q.status, calledTime: q.calledTime, finishedTime: q.finishedTime }));
-  if (changes.length === 0) return;
-
+async function post(url: string, body: Record<string, unknown>, headers: Record<string, string> = {}) {
   try {
-    const res = await fetch("/api/sync", {
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ queues: changes }),
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      window.alert(body?.error ?? "บันทึกไม่สำเร็จ");
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      window.alert(data?.error ?? "บันทึกไม่สำเร็จ");
     }
   } catch {
     window.alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
   }
+}
+
+async function sync(before: MockState, after: MockState) {
+  const body = collectChanges(before, after, STAFF_COLLECTIONS);
+  if (JSON.stringify(before.settings) !== JSON.stringify(after.settings)) body.settings = after.settings;
+  if (Object.keys(body).length === 0) return;
+  await post("/api/sync", body);
   await pull();
+}
+
+async function syncLiff(before: MockState, after: MockState) {
+  const body = collectChanges(before, after, PATIENT_COLLECTIONS);
+  if (Object.keys(body).length === 0 || !liffToken) return;
+  await post("/api/liff/sync", body, { Authorization: `Bearer ${liffToken}` });
+  await pullLiff();
+}
+
+async function pullDisplay() {
+  try {
+    await tick();
+    const res = await fetch("/api/display/state", { cache: "no-store" });
+    if (res.ok) publish((await res.json()) as MockState, false);
+  } catch {
+  }
 }
 
 async function initLiff() {
@@ -152,6 +190,12 @@ function start() {
   started = true;
   useReal = REAL_MODE && window.location.pathname.startsWith("/staff");
   liffReal = REAL_MODE && window.location.pathname.startsWith("/liff");
+  displayReal = REAL_MODE && window.location.pathname.startsWith("/display");
+  if (displayReal) {
+    void pullDisplay();
+    window.setInterval(pullDisplay, POLL_MS);
+    return;
+  }
   if (liffReal) {
     void initLiff();
     window.setInterval(pullLiff, POLL_MS);
@@ -181,18 +225,19 @@ function subscribe(listener: () => void) {
 
 const actions = {
   update(fn: (s: MockState, now: number) => MockState) {
-    if (!snapshot || liffReal) return;
+    if (!snapshot || displayReal) return;
     const before = snapshot.state;
     const after = fn(before, simNow(before));
     commit(after);
     if (useReal) void sync(before, after);
+    if (liffReal) void syncLiff(before, after);
   },
   advance(minutes: number) {
-    if (useReal || liffReal) return;
+    if (isReal()) return;
     if (snapshot) commit({ ...snapshot.state, clockOffsetMs: snapshot.state.clockOffsetMs + minutes * MINUTE });
   },
   reset() {
-    if (useReal || liffReal) return;
+    if (isReal()) return;
     const keep = snapshot?.state.sessionUserId ?? null;
     commit({ ...buildSeed(Date.now()), sessionUserId: keep });
   },

@@ -20,6 +20,7 @@ function requireEnv(name: string): string {
 }
 
 async function clearAll() {
+  await prisma.systemSetting.deleteMany();
   await prisma.delivery.deleteMany();
   await prisma.refillSchedule.deleteMany();
   await prisma.prescription.deleteMany();
@@ -38,6 +39,9 @@ async function clearAll() {
 async function main() {
   if (process.env.NODE_ENV === "production") {
     throw new Error("Refusing to seed a production database");
+  }
+  if (process.env.SEED_ALLOW_RESET !== "yes") {
+    throw new Error("db:seed deletes every collection. Point DATABASE_URL at your own database and set SEED_ALLOW_RESET=yes, or use npm run db:sync to add only what is missing");
   }
   const adminPassword = requireEnv("SEED_ADMIN_PASSWORD");
   const staffPassword = requireEnv("SEED_STAFF_PASSWORD");
@@ -107,6 +111,8 @@ async function main() {
     }
     await prisma.shift.createMany({ data: shifts });
   }
+
+  await prisma.systemSetting.create({ data: {} });
 
   await prisma.user.createMany({
     data: [
