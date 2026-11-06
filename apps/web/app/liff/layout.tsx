@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MockBadge } from "@/components/ui";
 import { LIFF_USER_PREFIX } from "@/lib/mock/actions";
-import { useMock } from "@/lib/mock/store";
+import { MockProvider, useMock } from "@/lib/mock/store";
 
 const DEMO_USERS = [
   { id: "pt_14", label: "ผู้ป่วยทดสอบ 14 — มีคิวรออยู่" },
@@ -15,7 +15,16 @@ const DEMO_USERS = [
 ];
 
 const REAL = process.env.NEXT_PUBLIC_DATA_MODE === "real";
+
 export default function LiffLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <MockProvider>
+      <LiffShell>{children}</LiffShell>
+    </MockProvider>
+  );
+}
+
+function LiffShell({ children }: { children: React.ReactNode }) {
   const { state, update } = useMock();
   const pathname = usePathname();
   const fresh = state.patients.filter((p) => p.lineUserId.startsWith(LIFF_USER_PREFIX));

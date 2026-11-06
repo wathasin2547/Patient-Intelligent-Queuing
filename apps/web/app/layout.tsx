@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
-import { MockProvider } from "@/lib/mock/store";
 import "./globals.css";
 
 const plexThai = IBM_Plex_Sans_Thai({
@@ -18,7 +17,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="th" className={`${plexThai.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
-        <MockProvider>{children}</MockProvider>
+        {children}
       </body>
     </html>
   );
