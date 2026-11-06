@@ -161,6 +161,30 @@ async function pullLiff() {
   }
 }
 
+export function isLiffReal() {
+  return liffReal;
+}
+
+export async function liffPost(path: string, body: unknown): Promise<{ ok: boolean; error?: string }> {
+  if (!liffToken) return { ok: false, error: "ยังไม่ได้ล็อกอิน LINE" };
+
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${liffToken}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      return { ok: false, error: data?.error ?? "บันทึกไม่สำเร็จ" };
+    }
+    await pullLiff(); // ดึงข้อมูลล่าสุดกลับมา หน้าจอจะเห็นค่าที่เพิ่งบันทึก
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้" };
+  }
+}
+
 function start() {
   if (started) return;
   started = true;

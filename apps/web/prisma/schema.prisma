@@ -11,11 +11,15 @@ model Patient {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   lineUserId     String   @unique
   fullName       String?
+  age            Int?
   ageGroup       String?
   gender         String?
   healthCoverage String?
   isChronic      Boolean  @default(false)
   address        String?
+  phoneNumber    String?
+  nationalId     String?
+  hn             String?
   createdAt      DateTime @default(now())
 
   screenings   Screening[]
