@@ -10,6 +10,9 @@ export type Patient = {
   lineUserId: string;
   fullName: string;
   ageGroup: string;
+  age?: number | null;
+  phoneNumber?: string | null;
+  nationalId?: string | null;
   gender: string;
   healthCoverage: string;
   isChronic: boolean;
