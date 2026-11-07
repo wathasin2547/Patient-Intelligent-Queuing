@@ -106,6 +106,9 @@ async function post(url: string, body: Record<string, unknown>, headers: Record<
 async function sync(before: MockState, after: MockState) {
   const body = collectChanges(before, after, STAFF_COLLECTIONS);
   if (JSON.stringify(before.settings) !== JSON.stringify(after.settings)) body.settings = after.settings;
+  const kept = new Set(after.doctors.map((d) => d.id));
+  const removedDoctors = before.doctors.filter((d) => !kept.has(d.id)).map((d) => d.id);
+  if (removedDoctors.length) body.removedDoctors = removedDoctors;
   if (Object.keys(body).length === 0) return;
   await post("/api/sync", body);
   await pull();

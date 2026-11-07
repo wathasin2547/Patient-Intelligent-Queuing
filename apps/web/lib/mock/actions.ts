@@ -244,6 +244,12 @@ export function saveDepartment(s: MockState, d: Department): MockState {
 export function saveDoctor(s: MockState, d: Doctor): MockState {
   return { ...s, doctors: upsert(s.doctors, d) };
 }
+export function doctorInUse(s: MockState, id: string): boolean {
+  return [s.shifts, s.queues, s.appointments, s.users].some((list) => list.some((x) => x.doctorId === id));
+}
+export function removeDoctor(s: MockState, id: string): MockState {
+  return { ...s, doctors: s.doctors.filter((d) => d.id !== id) };
+}
 export function saveSymptomCode(s: MockState, c: SymptomCode): MockState {
   return { ...s, symptomCodes: upsert(s.symptomCodes, c) };
 }

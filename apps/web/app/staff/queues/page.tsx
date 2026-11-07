@@ -4,7 +4,7 @@ import { Hourglass, MessageCircle, Megaphone, Search, UserX, Zap, type LucideIco
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { CalledActions, CurrentPatient, PFormula, QueueRow } from "@/components/queue";
+import { CalledActions, CurrentPatient, QueueRow } from "@/components/queue";
 import { Avatar, btn, Card, doctorInitials, Empty, LevelChip, Notice, PageHeader, PillSelect, QUEUE_STATUS, Segmented, StatusChip, Tag } from "@/components/ui";
 import { callNext, issueWalkIn } from "@/lib/mock/actions";
 import { doctorLoad, doctorsOnShift, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
@@ -154,7 +154,6 @@ function QueuesBoard() {
       </div>
       <div className="mt-4 flex flex-col gap-1 px-1">
         {offShift.length > 0 && <p className="text-xs text-ink-3">ไม่อยู่ในเวรขณะนี้: {offShift.map((d) => d.name).join(", ")}</p>}
-        <PFormula />
       </div>
 
       <div className="mt-6 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -218,7 +217,7 @@ function QueuesBoard() {
         </Card>
 
         <div className="grid content-start gap-5 md:grid-cols-2 2xl:grid-cols-1">
-          <Card title="ประวัติการเรียกคิว" note="UC13 · ระบบเรียกเอง">
+          <Card title="ประวัติการเรียกคิว">
             {calls.length === 0 && <p className="text-sm text-ink-3">ยังไม่มีการเรียกคิวในรอบนี้</p>}
             <ul className="flex flex-col gap-3.5">
               {calls.map((e) => {
