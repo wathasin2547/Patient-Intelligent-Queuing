@@ -65,12 +65,13 @@ export async function loadState(): Promise<MockState> {
     })),
     patients: patients.map((p) => ({
       id: p.id,
+      hn: p.hn,
       lineUserId: p.lineUserId,
       fullName: p.fullName ?? "(ยังไม่ลงทะเบียน)",
       ageGroup: p.ageGroup ?? "",
       age: p.age,
       phoneNumber: p.phoneNumber,
-      nationalId: p.nationalId ? "x-xxxx-xxxxx-xx-" + p.nationalId.slice(-1) : null,
+      nationalId: p.nationalId,
       gender: p.gender ?? "",
       healthCoverage: p.healthCoverage === COVERAGE_OTHER && p.healthCoverageOther ? `${COVERAGE_OTHER} (${p.healthCoverageOther})` : p.healthCoverage ?? "",
       drugAllergies: p.drugAllergies,
@@ -222,7 +223,7 @@ export function stateForPatient(state: MockState, me: Patient | null): MockState
     queues: state.queues.map((q) =>
       mine(q.patientId)
         ? q
-        : { ...q, patientId: anon(q.id), screeningId: null, queueNumber: "", editedBy: null, referredFromQueueId: null },
+        : { ...q, patientId: anon(q.id), screeningId: null, editedBy: null, referredFromQueueId: null },
     ),
     appointments: state.appointments.map((a) => (mine(a.patientId) ? a : { ...a, patientId: "", reason: "", createdBy: "" })),
     screenings: state.screenings.filter((s) => mine(s.patientId)),

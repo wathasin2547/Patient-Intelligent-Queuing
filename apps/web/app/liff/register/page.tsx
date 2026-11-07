@@ -1,8 +1,6 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Notice } from "@/components/ui";
 import { registerPatient } from "@/lib/mock/actions";
@@ -19,7 +17,6 @@ export default function RegisterPage() {
 
 function RegisterForm() {
   const { state, update } = useMock();
-  const router = useRouter();
   const found = state.patients.find((p) => p.id === state.liffPatientId);
   const existing = found && found.fullName !== "(ยังไม่ลงทะเบียน)" ? found : undefined;
   const [form, setForm] = useState({
@@ -69,7 +66,6 @@ function RegisterForm() {
     } else {
       update((s, now) => registerPatient(s, now, data));
     }
-    router.push("/liff");
   }
 
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
@@ -81,8 +77,7 @@ function RegisterForm() {
   return (
     <div className="flex flex-1 flex-col p-4">
       <div className="px-1 pb-4 pt-2">
-        <h1 className="text-2xl font-medium tracking-tight">ลงทะเบียนครั้งแรก</h1>
-        <p className="text-sm text-ink-3">กรอกครั้งเดียว ครั้งต่อไประบบจำบัญชี LINE ของคุณได้</p>
+        <h1 className="text-2xl font-medium tracking-tight">ลงทะเบียน</h1>
       </div>
 
       <div className="flex flex-col gap-4 rounded-card bg-surface p-5">
@@ -125,12 +120,12 @@ function RegisterForm() {
           มีโรคประจำตัวที่ต้องรับยาต่อเนื่อง
           <input type="checkbox" checked={form.isChronic} onChange={(e) => set({ isChronic: e.target.checked })} className="h-5 w-5 accent-ink" />
         </label>
-        <Row label="ที่อยู่สำหรับจัดส่งยา (ไม่บังคับ)"><textarea value={form.address} onChange={(e) => set({ address: e.target.value })} className="input" rows={2} /></Row>
+        <Row label="ที่อยู่"><textarea value={form.address} onChange={(e) => set({ address: e.target.value })} className="input" rows={2} /></Row>
       </div>
 
       <label className="mt-3 flex gap-3 rounded-card bg-surface p-4 text-xs leading-relaxed text-ink-2">
         <ShieldCheck size={20} strokeWidth={1.8} className="shrink-0 text-ink" />
-        <span className="flex-1">ยินยอมให้สถานพยาบาลเก็บและใช้ข้อมูลอาการเพื่อการคัดกรองและจัดคิว ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562</span>
+        <span className="flex-1">ยินยอมให้สถานพยาบาลเก็บและใช้ข้อมูลอาการเพื่อการคัดกรองและจัดคิว</span>
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="h-5 w-5 shrink-0 accent-ink" />
       </label>
       {error && <div className="mt-3"><Notice tone="rose">{error}</Notice></div>}
@@ -144,23 +139,23 @@ function RegisterForm() {
 
 function ProfileView({ p }: { p: Patient }) {
   const items: [string, string][] = [
+    ["HN (Hospital Number)", p.hn || "-"],
     ["ชื่อ-นามสกุล", p.fullName],
     ["อายุ", p.age != null ? `${p.age} ปี` : "-"],
     ["เพศ", p.gender || "-"],
     ["เบอร์โทรศัพท์", p.phoneNumber || "-"],
-    ["เลขบัตรประชาชน", p.nationalId || "-"],
+    ["เลขบัตรประชาชน", p.nationalId ? p.nationalId.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d)/, "$1-$2-$3-$4-$5") : "-"],
     ["สิทธิการรักษา", p.healthCoverage || "-"],
     ["ประวัติการแพ้ยา", p.drugAllergies || "-"],
     ["ศาสนา", p.religion || "-"],
     ["โรคประจำตัว", p.isChronic ? "มีโรคประจำตัวที่ต้องรับยาต่อเนื่อง" : "ไม่มี"],
-    ["ที่อยู่สำหรับจัดส่งยา", p.address || "-"],
+    ["ที่อยู่", p.address || "-"],
   ];
 
   return (
     <div className="flex flex-1 flex-col p-4">
       <div className="px-1 pb-4 pt-2">
         <h1 className="text-2xl font-medium tracking-tight">ข้อมูลของฉัน</h1>
-        <p className="text-sm text-ink-3">ข้อมูลที่ลงทะเบียนไว้กับสถานพยาบาล</p>
       </div>
 
       <div className="flex flex-col gap-4 rounded-card bg-surface p-5">
@@ -173,7 +168,6 @@ function ProfileView({ p }: { p: Patient }) {
       </div>
 
       <p className="mt-3 px-1 text-xs text-ink-3">หากต้องการแก้ไขข้อมูล กรุณาติดต่อเจ้าหน้าที่ ณ จุดบริการ</p>
-      <Link href="/liff" className="mt-4 rounded-full bg-ink py-3.5 text-center font-medium text-white">กลับหน้าหลัก</Link>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { LEVEL, Notice } from "@/components/ui";
 import { cancelQueue } from "@/lib/mock/actions";
-import { ACTIVE, estimateCallTime, isCalledOrIn, positionInLine } from "@/lib/mock/logic";
+import { ACTIVE, estimateCallTime, isCalledOrIn, positionInLine, rankedWaiting} from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import { bkkDate, fmtTime } from "@/lib/mock/time";
 import type { Queue } from "@/lib/mock/types";
@@ -88,6 +88,7 @@ function MainCard({ q }: { q: Queue }) {
   const online = q.visitType === "ONLINE";
   const meetingUrl = q.doctorId ? doctor.get(q.doctorId)?.meetingUrl : null;
   const eta = estimateCallTime(state, q, now);
+  const nextUp = !done && q.doctorId ? rankedWaiting(state, q.doctorId, now).slice(0, 3) : [];
 
   function cancel() {
     const r = cancelQueue(state, now, q.id);
@@ -126,6 +127,24 @@ function MainCard({ q }: { q: Queue }) {
         <Info label="แพทย์" value={q.doctorId ? doctor.get(q.doctorId)?.name ?? "-" : "รอจัดแพทย์"} />
         <Info label="รับคิวเมื่อ" value={`${fmtTime(q.checkInTime)} น.`} />
       </div>
+
+      {!done && (
+        <div className="rounded-card bg-surface p-4">
+          <div className="mb-3 text-xs font-medium text-ink-2">คิวที่จะถูกเรียกต่อไป</div>
+          {nextUp.length === 0 ? (
+            <p className="text-center text-sm text-ink-3">ยังไม่มีคิวรอ</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {nextUp.map((x, i) => (
+                <div key={x.id} className="rounded-[20px] bg-subtle px-3 py-3 text-center">
+                  <div className="text-xs opacity-60">[{i + 1}]</div>
+                  <div className="font-mono text-lg font-semibold">{x.queueNumber}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!done && !(online && called) && (
         <div className="flex gap-3 rounded-card bg-surface p-4 text-sm text-ink-2">

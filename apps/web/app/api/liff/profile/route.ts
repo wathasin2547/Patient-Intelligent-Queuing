@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ageGroupOf } from "@/lib/age";
 import { isValidNationalId } from "@/lib/national-id";
 import { COVERAGE, COVERAGE_OTHER } from "@/lib/patient-options";
+import { issueHn } from "@/lib/db/hn";
 
 export async function POST(req:Request) {
     const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -36,10 +37,13 @@ export async function POST(req:Request) {
         healthCoverageOther: parsed.data.healthCoverage === COVERAGE_OTHER ? parsed.data.healthCoverageOther : null,
     };
 
+        const existing = await prisma.patient.findUnique({ where: { lineUserId }, select: { hn: true } });
+    const hn = existing?.hn ?? (await issueHn());
+
     await prisma.patient.upsert({
         where: { lineUserId },
-        update: data,
-        create: { lineUserId, ...data },
+        update: { ...data, hn },
+        create: { lineUserId, ...data, hn },
     });
 
     return NextResponse.json({ ok: true});
