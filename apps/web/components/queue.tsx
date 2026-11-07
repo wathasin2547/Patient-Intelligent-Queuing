@@ -97,12 +97,3 @@ export function CalledActions({ q, small }: { q: Queue; small?: boolean }) {
     </div>
   );
 }
-
-export function PFormula() {
-  return (
-    <p className="text-xs leading-relaxed text-ink-3">
-      ลำดับเรียงตาม P = B<sub>ระดับ</sub> + α × นาทีที่รอ (B = 1000 / 600 / 300 / 200 สำหรับระดับ 2–5, α = 2) ·
-      ผู้ป่วยที่มีนัดเริ่มนับเวลารอจากเวลานัด · ผู้ป่วยระดับเขียวที่รอนานจะขยับขึ้นเอง
-    </p>
-  );
-}

@@ -99,7 +99,6 @@ export default function DisplayPage() {
         })}
         {doctors.length === 0 && <p className="text-xl text-white/80">ไม่มีแพทย์อยู่ในเวรขณะนี้</p>}
       </div>
-      <footer className="mt-6 text-base text-white/80">ลำดับถัดไปอาจเปลี่ยนตามความเร่งด่วนและเวลารอ · ผู้ป่วยจะได้รับข้อความทาง LINE เมื่อถึงคิว</footer>
     </div>
   );
 }

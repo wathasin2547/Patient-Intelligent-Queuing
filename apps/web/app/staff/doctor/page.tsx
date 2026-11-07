@@ -3,7 +3,7 @@
 import { CalendarCheck, CheckCheck, ClipboardList, Stethoscope, Users, Video } from "lucide-react";
 import Link from "next/link";
 import { APPOINTMENT_STATUS, btn, Card, Empty, LevelChip, PageHeader, StatusChip, Tag } from "@/components/ui";
-import { CalledActions, PFormula, QueueRow } from "@/components/queue";
+import { CalledActions, QueueRow } from "@/components/queue";
 import { rankedWaiting, shiftNow } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import { bkkDate, fmtTime } from "@/lib/mock/time";
@@ -74,7 +74,6 @@ export default function DoctorPage() {
               {line.length === 0 && <p className="px-3 py-2 text-sm text-ink-3">ไม่มีผู้ป่วยรอ</p>}
               {line.map((q, i) => <QueueRow key={q.id} q={q} rank={i + 1} />)}
             </div>
-            <div className="mt-4"><PFormula /></div>
           </Card>
 
           <Card title="นัดหมายวันนี้" icon={CalendarCheck}>

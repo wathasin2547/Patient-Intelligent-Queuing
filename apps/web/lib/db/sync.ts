@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 export type Changes = {
   departments?: Department[];
   doctors?: Doctor[];
+  removedDoctors?: string[];
   shifts?: Shift[];
   appointments?: Appointment[];
   queues?: Queue[];
@@ -27,7 +28,7 @@ export type Changes = {
 };
 
 const ACCESS: Record<Role, (keyof Changes)[]> = {
-  ADMIN: ["departments", "doctors", "shifts", "appointments", "queues", "prescriptions", "deliveries", "refills", "symptomCodes", "questions", "users", "settings", "notifications"],
+  ADMIN: ["departments", "doctors", "removedDoctors", "shifts", "appointments", "queues", "prescriptions", "deliveries", "refills", "symptomCodes", "questions", "users", "settings", "notifications"],
   STAFF: ["shifts", "appointments", "queues", "deliveries", "notifications"],
   DOCTOR: ["queues", "prescriptions", "refills", "notifications"],
 };
@@ -137,6 +138,13 @@ async function saveMasterData(c: Changes, ids: Ids) {
     const id = ids.of(d.id);
     const data = { name: d.name, departmentId: ids.of(d.departmentId), meetingUrl: d.meetingUrl };
     await prisma.doctor.upsert({ where: { id }, create: { id, ...data }, update: data });
+  }
+  for (const id of c.removedDoctors ?? []) {
+    if (!OBJECT_ID.test(id)) continue;
+    const where = { doctorId: id };
+    const used = await Promise.all([prisma.shift.count({ where }), prisma.queue.count({ where }), prisma.appointment.count({ where }), prisma.user.count({ where })]);
+    if (used.some((n) => n > 0)) throw new SyncError("ลบแพทย์คนนี้ไม่ได้ เพราะมีเวร คิว นัดหมาย หรือบัญชีผู้ใช้ผูกอยู่");
+    await prisma.doctor.deleteMany({ where: { id } });
   }
   for (const s of c.symptomCodes ?? []) {
     const id = ids.of(s.id);

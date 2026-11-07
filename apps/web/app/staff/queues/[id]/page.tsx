@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, Forward, Layers, MessageSquareText, Pill, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarCheck, ClipboardList, FilePenLine, Forward, Layers, MessageSquareText, Pill, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -11,7 +11,7 @@ import { DELIVERY_LABEL, editScreening, referQueue, updateDeliveryStatus } from 
 import { doctorsOnShift, estimateCallTime, nextShiftStart, positionInLine, queueScore, waitingMinutes } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
 import { bkkDate, fmtShortDate, fmtTime } from "@/lib/mock/time";
-import type { DeliveryStatus, Level, Queue } from "@/lib/mock/types";
+import type { DeliveryStatus, Level, Patient, Queue } from "@/lib/mock/types";
 
 function useMe() {
   const { state } = useMock();
@@ -85,6 +85,8 @@ function QueueDetail({ q }: { q: Queue }) {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="flex min-w-0 flex-col gap-5">
+          {patient && <PatientCard patient={patient} />}
+
           {appointment && (
             <Card title="ข้อมูลนัดหมาย" icon={CalendarCheck}>
               <p className="text-sm">นัดกับ {doctor.get(appointment.doctorId)?.name} เวลา {fmtTime(appointment.appointmentTime)} น. · {appointment.reason}</p>
@@ -103,16 +105,6 @@ function QueueDetail({ q }: { q: Queue }) {
                     </div>
                   ))}
                 </dl>
-                <div className="mt-4">
-                  <div className="text-xs text-ink-3">ข้อความที่ผู้ป่วยพิมพ์ (ต้นฉบับ)</div>
-                  <p className="mt-1 text-[15px] leading-relaxed">{screening.freeTextInput ? `“${screening.freeTextInput}”` : <span className="text-ink-3">— ไม่ได้พิมพ์ —</span>}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line/70 pt-4 text-sm">
-                  <span className="flex items-center gap-1.5 text-xs text-ink-3"><Sparkles size={14} strokeWidth={1.8} /> รหัสอาการจาก LLM</span>
-                  {screening.llmStatus === "ok" && (screening.llmCodes.length ? screening.llmCodes.map((c) => <code key={c} className="rounded-full bg-subtle px-2.5 py-0.5 text-xs">{c}</code>) : <span className="text-xs text-ink-3">ไม่พบรหัสที่ตรงกับบัญชี</span>)}
-                  {screening.llmStatus === "skipped" && <span className="text-xs text-ink-3">ไม่ได้เรียก (ไม่มีข้อความ)</span>}
-                  {screening.llmStatus === "failed" && <Tag tone="amber">เรียก LLM ไม่สำเร็จ · ใช้เฉพาะคำตอบปลายปิด ควรอ่านข้อความประกอบ</Tag>}
-                </div>
               </Card>
 
               <Card title="ผลการคัดกรองของระบบ" icon={ClipboardList} note="ระบบแนะนำแผนก ไม่ได้วินิจฉัยโรค">
@@ -206,6 +198,53 @@ function ReferCard({ q }: { q: Queue }) {
       <button onClick={refer} disabled={!dept} className={`${btn.secondary} mt-3 w-full`}>ส่งต่อและออกคิว</button>
       {result && <div className="mt-3"><Notice tone={result.ok ? "accent" : "amber"}>{result.text}</Notice></div>}
       <p className="mt-3 text-xs text-ink-3">คิวใหม่เริ่มนับเวลารอตั้งแต่ตอนส่งต่อ จึงไม่แซงผู้ป่วยที่รอแผนกนั้นอยู่ก่อน</p>
+    </Card>
+  );
+}
+
+const NO_ALLERGY = ["", "-", "ไม่มี", "ไม่แพ้", "ไม่แพ้ยา", "ไม่มีประวัติแพ้ยา"];
+
+function maskNationalId(id: string) {
+  const d = id.replace(/\D/g, "");
+  return `x-xxxx-xxxxx-${d.length === 13 ? d.slice(10, 12) : "xx"}-${d.slice(-1)}`;
+}
+
+function PatientCard({ patient: p }: { patient: Patient }) {
+  const allergy = p.drugAllergies?.trim() ?? "";
+  const hasAllergy = !NO_ALLERGY.includes(allergy.replace(/\s/g, ""));
+  const rows: [string, string][] = [
+    ["HN", p.hn ?? "-"],
+    ["ชื่อ-นามสกุล", p.fullName],
+    ["อายุ", p.age != null ? `${p.age} ปี` : p.ageGroup ? `${p.ageGroup} ปี` : "-"],
+    ["เพศ", p.gender || "-"],
+    ["สิทธิการรักษา", p.healthCoverage || "-"],
+    ["โรคประจำตัว", p.isChronic ? "มี" : "ไม่มี"],
+    ["ศาสนา", p.religion || "-"],
+    ["เบอร์โทรศัพท์", p.phoneNumber || "-"],
+    ["เลขบัตรประชาชน", p.nationalId ? maskNationalId(p.nationalId) : "-"],
+  ];
+
+  return (
+    <Card title="ข้อมูลผู้ป่วย" icon={UserRound} note="จากการลงทะเบียนผ่าน LINE">
+      {p.drugAllergies != null && (
+        <div className="mb-4">
+          <Notice tone={hasAllergy ? "rose" : "neutral"}>
+            <span className="font-medium">ประวัติแพ้ยา:</span> {hasAllergy ? allergy : "ไม่มี"}
+          </Notice>
+        </div>
+      )}
+      <dl className="grid gap-2 sm:grid-cols-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-baseline justify-between gap-4 rounded-2xl bg-subtle px-4 py-2.5 text-sm">
+            <dt className="shrink-0 text-ink-3">{label}</dt>
+            <dd className="min-w-0 truncate text-right font-medium">{value}</dd>
+          </div>
+        ))}
+        <div className="rounded-2xl bg-subtle px-4 py-2.5 text-sm sm:col-span-2">
+          <dt className="text-ink-3">ที่อยู่</dt>
+          <dd className="mt-0.5 font-medium">{p.address || "-"}</dd>
+        </div>
+      </dl>
     </Card>
   );
 }
@@ -326,7 +365,6 @@ function EditCard({ q }: { q: Queue }) {
       </div>
       <button disabled={!editable || !changed} onClick={save} className={`${btn.primary} mt-5 w-full`}>บันทึกการแก้ไข</button>
       {saved && <p className="mt-2 text-xs text-ink-2">{saved}</p>}
-      <p className="mt-3 text-xs text-ink-3">ระดับแดงไม่ออกคิว ระบบส่งต่อจุดบริการฉุกเฉินตั้งแต่ขั้นคัดกรอง</p>
     </Card>
   );
 }
