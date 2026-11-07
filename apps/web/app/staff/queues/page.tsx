@@ -61,6 +61,25 @@ function QueuesBoard() {
     setSimMsg(r.message);
   }
 
+  const [busy, setBusy] = useState(false);
+
+  async function enqueue(count: number) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/dev/enqueue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string; results?: { queueNumber: string | null }[] } | null;
+      if (!res.ok || !data?.results) return setSimMsg(data?.error ?? "สร้างคิวไม่สำเร็จ");
+      setSimMsg(`ได้คิว ${data.results.filter((r) => r.queueNumber).length} จาก ${count} ราย กำลังรีเฟรช...`);
+      setTimeout(() => window.location.reload(), 1200);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function call(doctorId: string) {
     const r = callNext(state, now, doctorId);
     if (r.error) return window.alert(r.error);
@@ -94,6 +113,21 @@ function QueuesBoard() {
         </div>
         {simMsg && <div className="mt-4"><Notice tone="sky">{simMsg}</Notice></div>}
       </section>
+      )}
+
+      {REAL_MODE && process.env.NODE_ENV !== "production" && (
+        <section className="mb-5 rounded-card border-2 border-dashed border-line bg-surface p-5 sm:p-6">
+          <h2 className="text-[17px] font-semibold tracking-tight text-ink">สร้างผู้ป่วยทดสอบ (โหมดจริง)</h2>
+          <p className="mt-1 text-xs text-ink-3">เขียนลงฐานข้อมูลจริง ผู้ป่วยชื่อ &quot;ผู้ป่วยทดสอบ ...&quot; ตอบคำถามแบบสุ่มและออกคิวตามกติกาจริง</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[1, 5, 10].map((n) => (
+              <button key={n} disabled={busy} onClick={() => enqueue(n)} className="min-h-9 rounded-full bg-subtle px-3.5 py-2 text-sm text-ink ring-1 ring-line transition hover:bg-subtle-2 disabled:opacity-50">
+                + {n} ราย
+              </button>
+            ))}
+          </div>
+          {simMsg && <div className="mt-4"><Notice tone="sky">{simMsg}</Notice></div>}
+        </section>
       )}
 
       {unassigned.length > 0 && (
