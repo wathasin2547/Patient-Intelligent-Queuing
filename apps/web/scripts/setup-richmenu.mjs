@@ -7,26 +7,33 @@ const auth = { Authorization: `Bearer ${token}` };
 const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
 if (!liffId) throw new Error("ไม่พบ NEXT_PUBLIC_LIFF_ID ใน .env");
 
-const cell = (col, row, label, text) => ({
-  bounds: { x: col * 1250, y: row * 843, width: 1250, height: 843 },
-  action: { type: "message", label, text },
-});
+const image = await readFile(new URL("./richmenu.png", import.meta.url));
+if (image.subarray(1, 4).toString() !== "PNG") throw new Error("richmenu ต้องเป็นไฟล์ PNG ชื่อ richmenu.png");
+const W = image.readUInt32BE(16);
+const H = image.readUInt32BE(20);
+if (W < 800 || W > 2500 || H < 250 || W / H < 1.45) throw new Error(`ขนาดรูป ${W}x${H} ไม่ผ่านเงื่อนไขของ LINE`);
 
-const link = (col, row, label, page) => ({
-  bounds: { x: col * 1250, y: row * 843, width: 1250, height: 843 },
-  action: { type: "uri", label, uri: `https://liff.line.me/${liffId}/${page}` },
+const X = [0, Math.round(W * 0.3353), Math.round(W * 0.6617), W];
+const Y = [0, Math.round(H / 2), H];
+
+const area = (c0, c1, r0, r1, action) => ({
+  bounds: { x: X[c0], y: Y[r0], width: X[c1] - X[c0], height: Y[r1] - Y[r0] },
+  action,
 });
+const say = (label, text) => ({ type: "message", label, text });
+const open = (label, page) => ({ type: "uri", label, uri: `https://liff.line.me/${liffId}/${page}` });
 
 const menu = {
-  size: { width: 2500, height: 1686 },
+  size: { width: W, height: H },
   selected: true,
   name: "PIQ main menu",
   chatBarText: "เมนู",
   areas: [
-    cell(0, 0, "รับคิว", "รับคิว"),
-    link(1, 0, "สถานะคิว", "queue"),
-    link(0, 1, "รับยา", "medicine"),
-    link(1, 1, "ข้อมูลของฉัน", "register"),
+    area(0, 1, 0, 1, say("รับคิว", "รับคิว")),
+    area(1, 2, 0, 1, open("สถานะคิว", "queue")),
+    area(0, 1, 1, 2, open("ข้อมูลของฉัน", "register")),
+    area(1, 2, 1, 2, open("รับยา", "medicine")),
+    area(2, 3, 0, 2, open("ลงทะเบียน", "register")),
   ],
 };
 
@@ -43,7 +50,6 @@ const created = await call(
 );
 const { richMenuId } = await created.json();
 
-const image = await readFile(new URL("./richmenu.png", import.meta.url));
 await call(
   `https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`,
   { method: "POST", headers: { ...auth, "Content-Type": "image/png" }, body: image },
@@ -52,4 +58,4 @@ await call(
 
 await call(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, { method: "POST", headers: auth }, "ตั้งเป็นเมนูเริ่มต้น");
 
-console.log("สำเร็จ richMenuId =", richMenuId);
+console.log("สำเร็จ richMenuId =", richMenuId, `ขนาดรูป ${W}x${H}`);
