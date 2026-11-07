@@ -4,7 +4,6 @@ import { ArrowRight, BarChart3, CalendarCheck, Megaphone, Siren, Stethoscope, Ti
 import Link from "next/link";
 import { useState } from "react";
 import { ColumnChart, HBarChart, LevelBreakdown } from "@/components/charts";
-import { PFormula } from "@/components/queue";
 import { Avatar, btn, Card, doctorInitials, LevelDot, PageHeader, PillSelect, StatusChip } from "@/components/ui";
 import { doctorLoad, doctorsOnShift, rankedWaiting, shiftNow, waitingMinutes } from "@/lib/mock/logic";
 import { useLookups, useMock } from "@/lib/mock/store";
@@ -54,7 +53,7 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <PageHeader title="ภาพรวมคิว" subtitle={`ข้อมูล ณ ${fmtTime(now)} น. · ปรับอัตโนมัติทุก 10 วินาที`}>
+      <PageHeader title="ภาพรวมคิว" subtitle={`ข้อมูล ณ ${fmtTime(now)} น.`}>
         <PillSelect value={dept} onChange={setDept}>
           <option value="ALL">ทุกแผนก</option>
           {activeDepts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -106,7 +105,6 @@ export default function Dashboard() {
 
             <div className="mt-6">
               <div className="text-sm font-medium">รอนานที่สุด</div>
-              <p className="text-xs text-ink-3">คะแนน P ของผู้ป่วยกลุ่มนี้เพิ่มขึ้นตามเวลารอ ระบบจะเรียกเองเมื่อแพทย์ว่าง</p>
               <div className="mt-4 flex flex-wrap items-start gap-4">
                 {longest.length === 0 && <span className="text-sm text-ink-3">ไม่มีผู้ป่วยรอ</span>}
                 {longest.map((q) => (
@@ -186,7 +184,7 @@ export default function Dashboard() {
             <Link href="/staff/queues" className={`${btn.secondary} mt-3 w-full`}>ดูคิวทั้งหมด</Link>
           </Card>
 
-          <Card title="เรียกคิวล่าสุด" note="ระบบเรียกเองเมื่อแพทย์ว่าง (UC13)">
+          <Card title="เรียกคิวล่าสุด">
             {calls.length === 0 && <p className="text-sm text-ink-3">ยังไม่มีการเรียกคิว</p>}
             <ul className="flex flex-col gap-4">
               {calls.map((e) => {
@@ -203,7 +201,6 @@ export default function Dashboard() {
               })}
             </ul>
           </Card>
-          <div className="px-2"><PFormula /></div>
         </div>
       </div>
     </div>

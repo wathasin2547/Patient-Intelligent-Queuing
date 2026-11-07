@@ -1,9 +1,9 @@
 "use client";
 
-import { Building2, HeartPulse, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, X } from "lucide-react";
+import { Building2, HeartPulse, KeyRound, Layers, ListChecks, Plus, Stethoscope, Tags, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { Avatar, btn, Card, doctorInitials, Field, Notice, PageHeader, PillSelect, Segmented, Tag } from "@/components/ui";
-import { ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
+import { doctorInUse, removeDoctor, ROLE_LABEL, saveDepartment, saveDoctor, saveQuestion, saveSymptomCode, saveUser } from "@/lib/mock/actions";
 import { maxSafeBonusMinutes, newId } from "@/lib/mock/logic";
 import { useLookups, useMock, REAL_MODE } from "@/lib/mock/store";
 import type { Level, Question, Role, SymptomCode } from "@/lib/mock/types";
@@ -167,21 +167,30 @@ function RiskSettings() {
 function Doctors() {
   const { state, update } = useMock();
   const { dept } = useLookups();
-  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "", meetingUrl: "" });
+  const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "" });
   return (
     <div className={LAYOUT}>
-      <Card title="แพทย์" icon={Stethoscope} note="เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย · ลิงก์ห้องตรวจออนไลน์ส่งให้ผู้ป่วยตรวจออนไลน์เมื่อถึงคิว">
+      <Card title="แพทย์" icon={Stethoscope} note="คลิกชื่อเพื่อแก้ไข · เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย">
         <ul className="flex flex-col gap-2">
           {state.doctors.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2">
               <Avatar text={doctorInitials(d.name, dept.get(d.departmentId)?.code)} dark />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{d.name}</div>
-                <MeetingUrlInput key={d.meetingUrl ?? ""} value={d.meetingUrl} onSave={(v) => update((s) => saveDoctor(s, { ...d, meetingUrl: v }))} />
+                <DoctorNameInput key={d.name} value={d.name} onSave={(name) => update((s) => saveDoctor(s, { ...d, name }))} />
               </div>
               <PillSelect value={d.departmentId} onChange={(v) => update((s) => saveDoctor(s, { ...d, departmentId: v }))} className="w-48">
                 {state.departments.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </PillSelect>
+              <button
+                aria-label={`ลบ ${d.name}`}
+                onClick={() => {
+                  if (doctorInUse(state, d.id)) return window.alert("ลบแพทย์คนนี้ไม่ได้ เพราะมีเวร คิว นัดหมาย หรือบัญชีผู้ใช้ผูกอยู่");
+                  if (window.confirm(`ลบ ${d.name} ออกจากระบบ?`)) update((s) => removeDoctor(s, d.id));
+                }}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition hover:bg-rose-50 hover:text-rose-700"
+              >
+                <Trash2 size={16} strokeWidth={1.8} />
+              </button>
             </li>
           ))}
         </ul>
@@ -194,14 +203,11 @@ function Doctors() {
               {state.departments.filter((d) => d.isActive).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
-          <Field label="ลิงก์ห้องตรวจออนไลน์" hint="ห้องประจำของแพทย์บนบริการวิดีโอคอลภายนอก เว้นว่างได้">
-            <input value={form.meetingUrl} onChange={(e) => setForm((f) => ({ ...f, meetingUrl: e.target.value }))} className="input" placeholder="https://" />
-          </Field>
           <button
             disabled={!form.name.trim()}
             onClick={() => {
-              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId, meetingUrl: form.meetingUrl.trim() || null }));
-              setForm((f) => ({ ...f, name: "", meetingUrl: "" }));
+              update((s) => saveDoctor(s, { id: newId("doc"), name: form.name.trim(), departmentId: form.departmentId, meetingUrl: null }));
+              setForm((f) => ({ ...f, name: "" }));
             }}
             className={`${btn.primary} mt-1`}
           >
@@ -213,15 +219,16 @@ function Doctors() {
   );
 }
 
-function MeetingUrlInput({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
-  const [text, setText] = useState(value ?? "");
+function DoctorNameInput({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [text, setText] = useState(value);
   return (
     <input
       value={text}
       onChange={(e) => setText(e.target.value)}
-      onBlur={() => text.trim() !== (value ?? "") && onSave(text.trim() || null)}
-      placeholder="ลิงก์ห้องตรวจออนไลน์ (ยังไม่ได้ตั้ง)"
-      className="mt-0.5 w-full truncate bg-transparent text-xs text-ink-3 outline-none placeholder:text-ink-3/60 focus:text-ink"
+      onBlur={() => (text.trim() && text.trim() !== value ? onSave(text.trim()) : setText(value))}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      aria-label="ชื่อแพทย์"
+      className="w-full truncate rounded-lg bg-transparent px-1 py-0.5 font-medium outline-none ring-primary/40 hover:bg-surface focus:bg-surface focus:ring-2"
     />
   );
 }
@@ -483,7 +490,7 @@ function Users() {
       <Card title="สร้างบัญชี" icon={Plus}>
         <div className="flex flex-col gap-3">
           <Field label="ชื่อผู้ใช้"><input value={form.username} onChange={(e) => set({ username: e.target.value })} className="input" placeholder="เช่น staff.ped" /></Field>
-          <Field label="รหัสผ่านเริ่มต้น" hint="เก็บในรูปแบบแฮชเมื่อเชื่อมฐานข้อมูลจริง"><input type="password" autoComplete="new-password" value={form.password} onChange={(e) => set({ password: e.target.value })} className="input" /></Field>
+          <Field label="รหัสผ่านเริ่มต้น"><input type="password" autoComplete="new-password" value={form.password} onChange={(e) => set({ password: e.target.value })} className="input" /></Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="บทบาท">
               <select value={form.role} onChange={(e) => set({ role: e.target.value as Role })} className="input">
@@ -506,7 +513,6 @@ function Users() {
               </Field>
             )}
           </div>
-          {form.role === "DOCTOR" && <p className="text-xs text-ink-3">แพทย์เห็นเฉพาะคิวของตนเองและบันทึกผลการตรวจ (UC09) · แพทย์ 1 คนมีได้ 1 บัญชี</p>}
           <button onClick={add} className={`${btn.primary} mt-1`}>สร้างบัญชี</button>
           {err && <Notice tone="rose">{err}</Notice>}
         </div>
