@@ -13,6 +13,9 @@ export type Patient = {
   age?: number | null;
   phoneNumber?: string | null;
   nationalId?: string | null;
+  drugAllergies?: string | null;
+  hn?: string | null;
+  religion?: string | null;
   gender: string;
   healthCoverage: string;
   isChronic: boolean;

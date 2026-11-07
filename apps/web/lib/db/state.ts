@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { bkkDate } from "@/lib/mock/time";
 import type { CallEvent, Level, MockState, Patient, QuestionOption, ReasonItem, Settings } from "@/lib/mock/types";
+import { COVERAGE_OTHER } from "@/lib/patient-options";
 
 const DAY = 24 * 60 * 60 * 1000;
 const ACTIVE = ["WAITING", "CALLED", "IN_PROGRESS"];
@@ -64,14 +65,17 @@ export async function loadState(): Promise<MockState> {
     })),
     patients: patients.map((p) => ({
       id: p.id,
+      hn: p.hn,
       lineUserId: p.lineUserId,
       fullName: p.fullName ?? "(ยังไม่ลงทะเบียน)",
       ageGroup: p.ageGroup ?? "",
       age: p.age,
       phoneNumber: p.phoneNumber,
-      nationalId: p.nationalId ? "x-xxxx-xxxxx-xx-" + p.nationalId.slice(-1) : null,
+      nationalId: p.nationalId,
       gender: p.gender ?? "",
-      healthCoverage: p.healthCoverage ?? "",
+      healthCoverage: p.healthCoverage === COVERAGE_OTHER && p.healthCoverageOther ? `${COVERAGE_OTHER} (${p.healthCoverageOther})` : p.healthCoverage ?? "",
+      drugAllergies: p.drugAllergies,
+      religion: p.religion,
       isChronic: p.isChronic,
       address: p.address,
       createdAt: p.createdAt.toISOString(),
@@ -219,7 +223,7 @@ export function stateForPatient(state: MockState, me: Patient | null): MockState
     queues: state.queues.map((q) =>
       mine(q.patientId)
         ? q
-        : { ...q, patientId: anon(q.id), screeningId: null, queueNumber: "", editedBy: null, referredFromQueueId: null },
+        : { ...q, patientId: anon(q.id), screeningId: null, editedBy: null, referredFromQueueId: null },
     ),
     appointments: state.appointments.map((a) => (mine(a.patientId) ? a : { ...a, patientId: "", reason: "", createdBy: "" })),
     screenings: state.screenings.filter((s) => mine(s.patientId)),

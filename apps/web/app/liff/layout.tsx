@@ -51,15 +51,6 @@ function LiffShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex w-full max-w-[420px] flex-1 flex-col overflow-hidden bg-canvas sm:flex-none sm:rounded-[44px] sm:bg-brand sm:p-2.5 sm:shadow-[0_30px_70px_-30px_rgba(3,4,94,0.45)]">
         <div className="flex min-h-[760px] flex-1 flex-col overflow-hidden bg-canvas sm:rounded-[36px]">
-          <div className="flex items-center gap-2 bg-surface px-4 py-3.5">
-            {pathname !== "/liff" ? (
-              <Link href="/liff" className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full hover:bg-subtle"><ChevronLeft size={20} strokeWidth={1.8} /></Link>
-            ) : (
-              <span className="w-1" />
-            )}
-            <span className="flex-1 text-sm font-semibold">โรงพยาบาลตัวอย่าง</span>
-            <MoreHorizontal size={18} strokeWidth={1.8} className="text-ink-3" />
-          </div>
           <div className="flex flex-1 flex-col">{children}</div>
         </div>
       </div>

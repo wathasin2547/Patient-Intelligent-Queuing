@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
   allowedDevOrigins: ["affidavit-manlike-corncob.ngrok-free.dev"],
+  devIndicators: false,
 };
 
 
