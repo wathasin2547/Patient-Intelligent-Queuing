@@ -19,6 +19,9 @@ model Patient {
   address        String?
   phoneNumber    String?
   nationalId     String?
+  religion       String?
+  drugAllergies  String?
+  healthCoverageOther String?
   hn             String?
   createdAt      DateTime @default(now())
 

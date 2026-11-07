@@ -4,10 +4,17 @@ const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 if (!token) throw new Error("ไม่พบ LINE_CHANNEL_ACCESS_TOKEN ใน .env");
 
 const auth = { Authorization: `Bearer ${token}` };
+const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+if (!liffId) throw new Error("ไม่พบ NEXT_PUBLIC_LIFF_ID ใน .env");
 
 const cell = (col, row, label, text) => ({
   bounds: { x: col * 1250, y: row * 843, width: 1250, height: 843 },
   action: { type: "message", label, text },
+});
+
+const link = (col, row, label, page) => ({
+  bounds: { x: col * 1250, y: row * 843, width: 1250, height: 843 },
+  action: { type: "uri", label, uri: `https://liff.line.me/${liffId}/${page}` },
 });
 
 const menu = {
@@ -16,10 +23,10 @@ const menu = {
   name: "PIQ main menu",
   chatBarText: "เมนู",
   areas: [
-    cell(0, 0, "รับคิว", "ตรวจ"),
-    cell(1, 0, "สถานะคิว", "สถานะคิว"),
-    cell(0, 1, "รับยา", "รับยา"),
-    cell(1, 1, "ข้อมูลของฉัน", "ข้อมูลของฉัน"),
+    cell(0, 0, "รับคิว", "รับคิว"),
+    link(1, 0, "สถานะคิว", "queue"),
+    link(0, 1, "รับยา", "medicine"),
+    link(1, 1, "ข้อมูลของฉัน", "register"),
   ],
 };
 

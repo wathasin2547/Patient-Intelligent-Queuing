@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { bkkDate } from "@/lib/mock/time";
 import type { CallEvent, Level, MockState, Patient, QuestionOption, ReasonItem, Settings } from "@/lib/mock/types";
+import { COVERAGE_OTHER } from "@/lib/patient-options";
 
 const DAY = 24 * 60 * 60 * 1000;
 const ACTIVE = ["WAITING", "CALLED", "IN_PROGRESS"];
@@ -71,7 +72,9 @@ export async function loadState(): Promise<MockState> {
       phoneNumber: p.phoneNumber,
       nationalId: p.nationalId ? "x-xxxx-xxxxx-xx-" + p.nationalId.slice(-1) : null,
       gender: p.gender ?? "",
-      healthCoverage: p.healthCoverage ?? "",
+      healthCoverage: p.healthCoverage === COVERAGE_OTHER && p.healthCoverageOther ? `${COVERAGE_OTHER} (${p.healthCoverageOther})` : p.healthCoverage ?? "",
+      drugAllergies: p.drugAllergies,
+      religion: p.religion,
       isChronic: p.isChronic,
       address: p.address,
       createdAt: p.createdAt.toISOString(),
