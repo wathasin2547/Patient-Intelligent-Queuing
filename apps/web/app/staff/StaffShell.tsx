@@ -17,7 +17,7 @@ const NAV: { href: string; label: string; uc: string; icon: LucideIcon; roles: R
   { href: "/staff/doctor", label: "คิวของฉัน", uc: "UC09", icon: Stethoscope, roles: ["DOCTOR"] },
   { href: "/staff", label: "ภาพรวมคิว", uc: "UC07", icon: LayoutGrid, roles: ["STAFF", "ADMIN"] },
   { href: "/staff/queues", label: "จัดการคิว", uc: "UC10", icon: ListOrdered, roles: ["STAFF", "ADMIN"] },
-  { href: "/staff/schedule", label: "ตารางเวรและนัดหมาย", uc: "UC11", icon: CalendarDays, roles: ["STAFF", "ADMIN"] },
+  { href: "/staff/schedule", label: "ตารางเวรแพทย์", uc: "UC11", icon: CalendarDays, roles: ["STAFF", "ADMIN"] },
   { href: "/staff/master", label: "ข้อมูลพื้นฐาน", uc: "UC12", icon: SlidersHorizontal, roles: ["ADMIN"] },
 ];
 

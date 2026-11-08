@@ -170,7 +170,7 @@ function Doctors() {
   const [form, setForm] = useState({ name: "", departmentId: state.departments[0]?.id ?? "" });
   return (
     <div className={LAYOUT}>
-      <Card title="แพทย์" icon={Stethoscope} note="คลิกชื่อเพื่อแก้ไข · เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรและนัดหมาย">
+      <Card title="แพทย์" icon={Stethoscope} note="คลิกชื่อเพื่อแก้ไข · เพิ่มเวรให้แพทย์ได้ที่หน้าตารางเวรแพทย์">
         <ul className="flex flex-col gap-2">
           {state.doctors.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-subtle px-3 py-2.5 transition hover:bg-subtle-2">
