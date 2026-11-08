@@ -19,16 +19,20 @@ async function isRegistered(lineUserId?: string): Promise<boolean> {
   const patient = await prisma.patient.findUnique({ where: { lineUserId } });
   return Boolean(patient?.ageGroup);
 }
-
 const registerPrompt = (): LineMessage => ({
   type: "text",
-  text: `ยินดีต้อนรับครับ กรุณาลงทะเบียนก่อนรับคิว${LIFF_ID ? `\nhttps://liff.line.me/${LIFF_ID}/register` : ""}`,
+  text:
+    "ยินดีต้อนรับสู่ระบบจัดการคิวผู้ป่วย PIQ \n\n" +
+    "ระบบนี้ช่วยซักประวัติอาการผ่านแชต จัดแผนกและออกคิวให้ พร้อมแจ้งเตือนเมื่อใกล้ถึงคิวของคุณ\n\n" +
+    "หากคุณเข้ามารับบริการเป็นครั้งเเรก กรุณาลงทะเบียนก่อน" +
+    (LIFF_ID ? `\nhttps://liff.line.me/${LIFF_ID}/register` : "") +
+    '\n\nลงทะเบียนเสร็จแล้ว เลือกเมนู "รับคิว" หรือพิมพ์ "รับคิว" ได้เลยครับ',
 });
 
 export async function buildReply(event: LineEvent): Promise<LineMessage[] | null> {
   if (event.type === "follow") {
     if (await isRegistered(event.source?.userId)) {
-      return [{ type: "text", text: 'ยินดีต้อนรับกลับครับ พิมพ์ "รับคิว" เพื่อเริ่มซักประวัติอาการ' }];
+      return [{ type: "text", text: 'ยินดีต้อนรับกลับครับ เลือกเมนู "รับคิว" เพื่อเริ่มซักประวัติอาการ' }];
     }
     return [registerPrompt()];
   }
@@ -52,7 +56,7 @@ export async function buildReply(event: LineEvent): Promise<LineMessage[] | null
       return [{ type: "text", text: LIFF_ID ? `เปิดเมนู "${t}" ได้ที่ https://liff.line.me/${LIFF_ID}/${LIFF_PAGES[t]}` : `เมนู "${t}" ยังไม่พร้อมใช้งาน` }];
     }
 
-    return [{ type: "text", text: 'พิมพ์ "รับคิว" เพื่อเริ่มซักประวัติอาการครับ' }];
+    return [{ type: "text", text: 'เลือกเมนู "รับคิว" เพื่อเริ่มการซักประวัติอาการครับ' }];
   }
 
   if (event.type === "postback" && event.postback?.data) {
@@ -79,7 +83,7 @@ export async function buildReply(event: LineEvent): Promise<LineMessage[] | null
       return [{ type: "text", text }];
     } catch (err) {
       console.error("triage flow error", err);
-      return [{ type: "text", text: 'ขออภัย ระบบขัดข้องชั่วคราว ลองพิมพ์ "รับคิว" ใหม่อีกครั้งครับ' }];
+      return [{ type: "text", text: 'ขออภัย ระบบขัดข้องชั่วคราว เลือกเมนู "รับคิว" ใหม่อีกครั้งครับ' }];
     }
   }
 

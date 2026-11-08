@@ -116,7 +116,11 @@ function MainCard({ q }: { q: Queue }) {
               <span className="text-5xl font-light leading-none tabular-nums">{ahead}</span>
               <span className="pb-1 text-sm text-white/60">คนรออยู่ก่อนหน้า</span>
             </div>
-            {eta && <span className="pb-1 text-sm text-white/80">ประมาณ {fmtTime(eta)} น.</span>}
+            {eta && (
+              <span className="pb-1 text-sm text-white/80">
+                อีกประมาณ {Math.max(1, Math.round((eta - now) / 60000))} นาที
+              </span>
+            )}
           </div>
         )}
       </div>
